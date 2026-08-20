@@ -248,6 +248,7 @@ Item {
               model: root.groupsList
 
               delegate: DrawerCard {
+                host: root.host
                 groupData: modelData
                 fontFamily: root.fontFamily
                 foreground: root.colForeground

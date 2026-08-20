@@ -250,7 +250,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: !meta.iconUrl || meta.iconUrl.length === 0
                 text: meta.icon || "󰏖"
-                font.family: root.fontFamily
+                font.family: meta.fontFamily ? meta.fontFamily : root.fontFamily
                 font.pixelSize: Style.font.caption
                 color: root.accent
               }

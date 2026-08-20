@@ -705,7 +705,7 @@ Rectangle {
                     anchors.centerIn: parent
                     visible: !meta.iconUrl || meta.iconUrl.length === 0
                     text: meta.icon || "󰏖"
-                    font.family: root.fontFamily
+                    font.family: meta.fontFamily ? meta.fontFamily : root.fontFamily
                     font.pixelSize: Style.font.body
                     color: root.accent
                   }
@@ -1047,7 +1047,7 @@ Rectangle {
                   anchors.centerIn: parent
                   visible: !modelData.iconUrl || modelData.iconUrl.length === 0
                   text: modelData.icon || "󰏖"
-                  font.family: root.fontFamily
+                  font.family: modelData.fontFamily ? modelData.fontFamily : root.fontFamily
                   font.pixelSize: Style.font.body
                   color: isSelected ? root.accent : root.foreground
                 }
