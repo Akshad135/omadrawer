@@ -42,7 +42,7 @@ var KNOWN_PLUGINS = [
 ];
 
 var EXCLUDED_PLUGIN_IDS = [
-  "akshad.omadrawer",
+  "akshad135.omadrawer",
   "omarchy.indicators",
   "indicators"
 ];
@@ -52,9 +52,9 @@ function isExcludedPlugin(pluginId) {
   var id = pluginId.trim();
   if (id === "") return true;
   // The whole omadrawer entry family is internal: the invisible manager host
-  // (`akshad.omadrawer`) and one unique-id entry per drawer group
-  // (`akshad.omadrawer.<groupId>`).
-  if (id.indexOf("akshad.omadrawer") === 0) return true;
+  // (`akshad135.omadrawer`) and one unique-id entry per drawer group
+  // (`akshad135.omadrawer.<groupId>`).
+  if (id.indexOf("akshad135.omadrawer") === 0) return true;
   for (var i = 0; i < EXCLUDED_PLUGIN_IDS.length; i++) {
     if (id === EXCLUDED_PLUGIN_IDS[i] || id === "omarchy." + EXCLUDED_PLUGIN_IDS[i]) {
       return true;
@@ -253,25 +253,25 @@ function parseData(rawText) {
 
 // The unique bar-layout entry id of a drawer group. The bar's drag system
 // addresses entries by their id, so every omadrawer entry must carry a
-// distinct one: the plain manager host stays `akshad.omadrawer` while each
-// group gets `akshad.omadrawer.<groupId>` and loads this widget through the
+// distinct one: the plain manager host stays `akshad135.omadrawer` while each
+// group gets `akshad135.omadrawer.<groupId>` and loads this widget through the
 // custom-QML mechanism (type/source). Shared ids make the bar pick the first
 // matching entry on drag, which silently moves the wrong slot — or none.
 function groupEntryId(groupId) {
-  return "akshad.omadrawer." + String(groupId || "");
+  return "akshad135.omadrawer." + String(groupId || "");
 }
 
 // Identity of a drawer entry: "plain" for the manager host, "g:<groupId>"
 // for a group entry. Group entries are recognized by their groupId field, or
 // derived from a unique per-group id (missing groupId is healed on sync).
 function drawerEntryKey(entry) {
-  if (typeof entry === "string") return entry === "akshad.omadrawer" ? "plain" : "";
+  if (typeof entry === "string") return entry === "akshad135.omadrawer" ? "plain" : "";
   if (!entry || typeof entry !== "object") return "";
   var groupId = entry.groupId ? String(entry.groupId) : "";
   if (groupId !== "") return "g:" + groupId;
   var id = String(entry.id || "");
-  if (id === "akshad.omadrawer") return "plain";
-  var prefix = "akshad.omadrawer.";
+  if (id === "akshad135.omadrawer") return "plain";
+  var prefix = "akshad135.omadrawer.";
   if (id.indexOf(prefix) === 0 && id.length > prefix.length) return "g:" + id.substring(prefix.length);
   return "";
 }
@@ -359,7 +359,7 @@ function deduplicateBarLayout(barLayout) {
 // its own entry, a stale group entry, a plain entry in left/center, or a
 // group entry that does not carry its canonical shape (unique per-group id
 // plus the custom-QML type/source). Legacy shared-id entries satisfy the
-// key sets but share `akshad.omadrawer` with the host — the bar's drag
+// key sets but share `akshad135.omadrawer` with the host — the bar's drag
 // system then cannot tell them apart, so they must be rewritten. When
 // widgetSource is empty the source check is skipped (unit tests).
 function groupsNeedLayoutSync(groups, barLayout, widgetSource) {

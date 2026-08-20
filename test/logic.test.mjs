@@ -35,8 +35,8 @@ function check(name, actual, expected) {
 }
 
 console.log("== isExcludedPlugin ==")
-check("Excludes self plugin (akshad.omadrawer)", Logic.isExcludedPlugin("akshad.omadrawer"), true)
-check("Excludes per-group entry ids", Logic.isExcludedPlugin("akshad.omadrawer.group-mt1rctap-atwk"), true)
+check("Excludes self plugin (akshad135.omadrawer)", Logic.isExcludedPlugin("akshad135.omadrawer"), true)
+check("Excludes per-group entry ids", Logic.isExcludedPlugin("akshad135.omadrawer.group-mt1rctap-atwk"), true)
 check("Excludes omarchy.indicators", Logic.isExcludedPlugin("omarchy.indicators"), true)
 check("Excludes indicators suffix", Logic.isExcludedPlugin("indicators"), true)
 check("Allows regular plugins (omarchy.clock)", Logic.isExcludedPlugin("omarchy.clock"), false)
@@ -113,13 +113,13 @@ const parsedLegacy = Logic.parseData(legacyJson)
 check("Legacy raw array JSON formats properly", parsedLegacy.groups, testGroups)
 
 console.log("\n== drawerEntryKey & groupEntryId ==")
-const canonicalSource = "/home/user/.config/omarchy/plugins/akshad.omadrawer/BarWidget.qml"
+const canonicalSource = "/home/user/.config/omarchy/plugins/akshad135.omadrawer/BarWidget.qml"
 const canonicalEntry = (gid) => ({ id: Logic.groupEntryId(gid), type: "qml", source: canonicalSource, groupId: gid })
-check("groupEntryId builds unique per-group id", Logic.groupEntryId("g1"), "akshad.omadrawer.g1")
-check("Plain host entry keys as plain", Logic.drawerEntryKey({ id: "akshad.omadrawer" }), "plain")
-check("Legacy group entry keys by groupId", Logic.drawerEntryKey({ id: "akshad.omadrawer", groupId: "g1" }), "g:g1")
+check("groupEntryId builds unique per-group id", Logic.groupEntryId("g1"), "akshad135.omadrawer.g1")
+check("Plain host entry keys as plain", Logic.drawerEntryKey({ id: "akshad135.omadrawer" }), "plain")
+check("Legacy group entry keys by groupId", Logic.drawerEntryKey({ id: "akshad135.omadrawer", groupId: "g1" }), "g:g1")
 check("Canonical group entry keys by groupId", Logic.drawerEntryKey(canonicalEntry("g1")), "g:g1")
-check("Unique-id entry without groupId derives its key", Logic.drawerEntryKey({ id: "akshad.omadrawer.g1" }), "g:g1")
+check("Unique-id entry without groupId derives its key", Logic.drawerEntryKey({ id: "akshad135.omadrawer.g1" }), "g:g1")
 check("Foreign entries have no drawer key", Logic.drawerEntryKey("omarchy.clock"), "")
 check("Foreign entries have no drawer key (object)", Logic.drawerEntryKey({ id: "omarchy.menu" }), "")
 
@@ -128,8 +128,8 @@ console.log("\n== reconcileGroupsWithLayout ==")
 const leftGroups = [{ id: "g1", name: "LeftGroup", position: "left", plugins: [] }]
 const movedToCenterLayout = {
   left: ["omarchy.menu"],
-  center: [{ id: "akshad.omadrawer", groupId: "g1" }],
-  right: [{ id: "akshad.omadrawer" }]
+  center: [{ id: "akshad135.omadrawer", groupId: "g1" }],
+  right: [{ id: "akshad135.omadrawer" }]
 }
 const rec1 = Logic.reconcileGroupsWithLayout(leftGroups, movedToCenterLayout)
 check("Reconciles left to center drag", { changed: rec1.changed, position: rec1.groups[0].position }, { changed: true, position: "center" })
@@ -138,16 +138,16 @@ check("Reconciles left to center drag", { changed: rec1.changed, position: rec1.
 const movedToRightLayout = {
   left: ["omarchy.menu"],
   center: [],
-  right: [{ id: "akshad.omadrawer" }, { id: "akshad.omadrawer", groupId: "g1" }]
+  right: [{ id: "akshad135.omadrawer" }, { id: "akshad135.omadrawer", groupId: "g1" }]
 }
 const rec2 = Logic.reconcileGroupsWithLayout(leftGroups, movedToRightLayout)
 check("Reconciles left to right drag next to manager", { changed: rec2.changed, position: rec2.groups[0].position }, { changed: true, position: "right" })
 
 // Test 3: Same side reordering does not alter positions
 const sameSideLayout = {
-  left: ["omarchy.clock", { id: "akshad.omadrawer", groupId: "g1" }],
+  left: ["omarchy.clock", { id: "akshad135.omadrawer", groupId: "g1" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 const rec3 = Logic.reconcileGroupsWithLayout(leftGroups, sameSideLayout)
 check("Same side reorder does not change group position", rec3.changed, false)
@@ -156,7 +156,7 @@ check("Same side reorder does not change group position", rec3.changed, false)
 const managerOnlyLayout = {
   left: ["omarchy.menu"],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 const rec4 = Logic.reconcileGroupsWithLayout(leftGroups, managerOnlyLayout)
 check("Plain manager entry does not move groups", rec4.changed, false)
@@ -167,9 +167,9 @@ const twoGroups = [
   { id: "g2", position: "left", plugins: [] }
 ]
 const splitLayout = {
-  left: [{ id: "akshad.omadrawer", groupId: "g2" }],
-  center: [{ id: "akshad.omadrawer", groupId: "g1" }],
-  right: [{ id: "akshad.omadrawer" }]
+  left: [{ id: "akshad135.omadrawer", groupId: "g2" }],
+  center: [{ id: "akshad135.omadrawer", groupId: "g1" }],
+  right: [{ id: "akshad135.omadrawer" }]
 }
 const rec5 = Logic.reconcileGroupsWithLayout(twoGroups, splitLayout)
 check("Only dragged group moves", { changed: rec5.changed, positions: rec5.groups.map(g => g.position) }, { changed: true, positions: ["center", "left"] })
@@ -178,7 +178,7 @@ console.log("\n== deduplicateBarLayout ==")
 const duplicateLayout = {
   left: [],
   center: [],
-  right: ["omarchy.tray", "akshad.omadrawer", "akshad.omadrawer", "omarchy.clock"]
+  right: ["omarchy.tray", "akshad135.omadrawer", "akshad135.omadrawer", "omarchy.clock"]
 }
 const dedup = Logic.deduplicateBarLayout(duplicateLayout)
 check("Deduplicates duplicate plain slots in right section", dedup.changed, true)
@@ -189,9 +189,9 @@ const coexistingLayout = {
   left: [],
   center: [],
   right: [
-    { id: "akshad.omadrawer" },
-    { id: "akshad.omadrawer", groupId: "g1" },
-    { id: "akshad.omadrawer", groupId: "g2" }
+    { id: "akshad135.omadrawer" },
+    { id: "akshad135.omadrawer", groupId: "g1" },
+    { id: "akshad135.omadrawer", groupId: "g2" }
   ]
 }
 const dedupCo = Logic.deduplicateBarLayout(coexistingLayout)
@@ -203,9 +203,9 @@ const dupGroupLayout = {
   left: [],
   center: [],
   right: [
-    { id: "akshad.omadrawer" },
-    { id: "akshad.omadrawer", groupId: "g1" },
-    { id: "akshad.omadrawer", groupId: "g1" }
+    { id: "akshad135.omadrawer" },
+    { id: "akshad135.omadrawer", groupId: "g1" },
+    { id: "akshad135.omadrawer", groupId: "g1" }
   ]
 }
 const dedupDg = Logic.deduplicateBarLayout(dupGroupLayout)
@@ -213,9 +213,9 @@ check("Duplicate group entries are deduplicated", dedupDg.changed, true)
 check("Duplicate group section keeps manager plus one group entry", dedupDg.layout.right.length, 2)
 
 const cleanLayout = {
-  left: [{ id: "akshad.omadrawer", groupId: "g1" }],
+  left: [{ id: "akshad135.omadrawer", groupId: "g1" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 const dedup2 = Logic.deduplicateBarLayout(cleanLayout)
 check("Clean layout reports no duplicate changes", dedup2.changed, false)
@@ -224,7 +224,7 @@ check("Clean layout reports no duplicate changes", dedup2.changed, false)
 const dedupCanonical = Logic.deduplicateBarLayout({
   left: [],
   center: [],
-  right: [canonicalEntry("g1"), canonicalEntry("g1"), { id: "akshad.omadrawer" }]
+  right: [canonicalEntry("g1"), canonicalEntry("g1"), { id: "akshad135.omadrawer" }]
 })
 check("Canonical duplicate group entries are deduplicated", dedupCanonical.changed, true)
 check("Canonical dedup keeps manager plus one group entry", dedupCanonical.layout.right.length, 2)
@@ -233,14 +233,14 @@ console.log("\n== groupsNeedLayoutSync ==")
 const syncedLayout = {
   left: [canonicalEntry("g1")],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Perfect per-group layout needs no sync", Logic.groupsNeedLayoutSync(leftGroups, syncedLayout, canonicalSource), false)
 
 const missingGroupEntry = {
   left: ["omarchy.menu"],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Missing group entry needs sync", Logic.groupsNeedLayoutSync(leftGroups, missingGroupEntry, canonicalSource), true)
 
@@ -254,44 +254,44 @@ check("Missing plain manager entry in right needs sync", Logic.groupsNeedLayoutS
 const staleEntry = {
   left: [canonicalEntry("g1"), canonicalEntry("stale")],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Stale group entry needs sync", Logic.groupsNeedLayoutSync(leftGroups, staleEntry, canonicalSource), true)
 
 const plainInLeft = {
-  left: [canonicalEntry("g1"), { id: "akshad.omadrawer" }],
+  left: [canonicalEntry("g1"), { id: "akshad135.omadrawer" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Plain entry in left section needs sync", Logic.groupsNeedLayoutSync(leftGroups, plainInLeft, canonicalSource), true)
 
 // Shape checks: the same key sets can still need a rewrite when entries are
 // legacy shared-id, missing the custom-QML source, or missing groupId.
 const legacyEntry = {
-  left: [{ id: "akshad.omadrawer", groupId: "g1" }],
+  left: [{ id: "akshad135.omadrawer", groupId: "g1" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Legacy shared-id group entry needs sync", Logic.groupsNeedLayoutSync(leftGroups, legacyEntry, canonicalSource), true)
 
 const wrongSource = {
   left: [{ id: Logic.groupEntryId("g1"), type: "qml", source: "/somewhere/else/BarWidget.qml", groupId: "g1" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Group entry with wrong widget source needs sync", Logic.groupsNeedLayoutSync(leftGroups, wrongSource, canonicalSource), true)
 
 const missingType = {
   left: [{ id: Logic.groupEntryId("g1"), source: canonicalSource, groupId: "g1" }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Group entry missing custom-QML type needs sync", Logic.groupsNeedLayoutSync(leftGroups, missingType, canonicalSource), true)
 
 const missingGroupIdField = {
   left: [{ id: Logic.groupEntryId("g1"), type: "qml", source: canonicalSource }],
   center: [],
-  right: [{ id: "akshad.omadrawer" }]
+  right: [{ id: "akshad135.omadrawer" }]
 }
 check("Unique-id entry without groupId field needs sync", Logic.groupsNeedLayoutSync(leftGroups, missingGroupIdField, canonicalSource), true)
 
