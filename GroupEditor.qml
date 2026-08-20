@@ -15,32 +15,100 @@ Rectangle {
   property color accent: Color.accent
   property string viewMode: "editor" // "editor" | "picker"
 
-  readonly property var availablePlugins: {
-    var list = Logic.KNOWN_PLUGINS.slice()
-    var seen = {}
-    for (var i = 0; i < list.length; i++) seen[list[i].id] = true
-
-    if (host && host.bar && host.bar.barWidgetRegistry && host.bar.barWidgetRegistry.availableIds) {
-      var ids = host.bar.barWidgetRegistry.availableIds()
-      for (var j = 0; j < ids.length; j++) {
-        var id = ids[j]
-        if (!seen[id] && id !== "akshad.omadrawer") {
-          list.push(Logic.findPluginMeta(id))
-          seen[id] = true
-        }
-      }
-    }
-    return list
-  }
-
-  signal saveGroup(var groupData)
-  signal cancel()
-
   // Form State
   property string formId: ""
   property string formName: ""
   property string formIcon: "󰏖"
   property var selectedPluginIds: []
+
+  readonly property var otherGroupsPluginMap: {
+    var map = {}
+    if (!host || !host.groupsList) return map
+    for (var i = 0; i < host.groupsList.length; i++) {
+      var g = host.groupsList[i]
+      if (g && g.id !== formId && Array.isArray(g.plugins)) {
+        for (var j = 0; j < g.plugins.length; j++) {
+          map[g.plugins[j]] = true
+        }
+      }
+    }
+    return map
+  }
+
+  readonly property var activeBarPluginIds: {
+    var ids = []
+    var seen = {}
+
+    function addId(id) {
+      if (!id || typeof id !== "string") return
+      id = id.trim()
+      if (id === "" || id === "akshad.omadrawer" || seen[id]) return
+      seen[id] = true
+      ids.push(id)
+    }
+
+    // 1. Current group's plugins (if editing an existing group)
+    if (initialGroup && Array.isArray(initialGroup.plugins)) {
+      for (var i = 0; i < initialGroup.plugins.length; i++) {
+        addId(initialGroup.plugins[i])
+      }
+    }
+
+    // 2. Plugins currently present on the top bar layout (left, center, right)
+    var barLayout = null
+    if (host && host.bar) {
+      if (host.bar.barConfig && host.bar.barConfig.layout) {
+        barLayout = host.bar.barConfig.layout
+      } else if (host.bar.shell && host.bar.shell.shellConfig && host.bar.shell.shellConfig.bar && host.bar.shell.shellConfig.bar.layout) {
+        barLayout = host.bar.shell.shellConfig.bar.layout
+      }
+    }
+
+    if (barLayout) {
+      var sections = ["left", "center", "right"]
+      for (var s = 0; s < sections.length; s++) {
+        var secList = barLayout[sections[s]]
+        if (Array.isArray(secList)) {
+          for (var j = 0; j < secList.length; j++) {
+            var entry = secList[j]
+            var pid = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "")
+            addId(pid)
+          }
+        }
+      }
+    }
+
+    return ids
+  }
+
+  readonly property var availablePlugins: {
+    var result = []
+    var ids = activeBarPluginIds
+
+    // Disabled plugins map
+    var disabledMap = {}
+    if (host && host.bar && host.bar.shell && host.bar.shell.shellConfig && Array.isArray(host.bar.shell.shellConfig.disabledPlugins)) {
+      var dList = host.bar.shell.shellConfig.disabledPlugins
+      for (var d = 0; d < dList.length; d++) {
+        disabledMap[dList[d]] = true
+      }
+    }
+
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i]
+      if (disabledMap[id]) continue
+      if (otherGroupsPluginMap[id]) continue
+
+      // Resolve metadata
+      var meta = Logic.findPluginMeta(id)
+      result.push(meta)
+    }
+
+    return result
+  }
+
+  signal saveGroup(var groupData)
+  signal cancel()
 
   readonly property color colBorder: Style.normalBorderFor(foreground, accent)
   readonly property bool isEditing: formId !== ""
