@@ -78,10 +78,11 @@ var PRESET_ICONS = [
   "󰥔", "󰖐", "󰃭", "󰈙", "󰏝", "󰃟", "󰄬", "󰆍", "󰅨", "󰘐"
 ];
 
-// First-run state: a single welcome group with no plugins. It is the
-// discoverable entry point on the bar (no manager icon exists), clicking it
-// opens the manager, and it is removed automatically when the user creates
-// their first real group.
+// Stub state: a single welcome group with no plugins, shown whenever no
+// user-created groups exist (fresh install or after the last group is
+// deleted). It is the discoverable entry point on the bar (no manager icon
+// exists), clicking it opens the manager, and it is removed automatically
+// when the user creates their first real group.
 function getDefaultGroups() {
   return [
     {
@@ -233,6 +234,9 @@ function parseData(rawText) {
     }
     if (data && typeof data === "object") {
       var groups = Array.isArray(data.groups) ? data.groups : getDefaultGroups();
+      if (groups.length === 0) {
+        groups = getDefaultGroups();
+      }
       var settings = data.settings || {};
       if (!settings.displayMode) settings.displayMode = "icon";
       return {

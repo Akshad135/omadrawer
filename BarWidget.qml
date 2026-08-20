@@ -475,6 +475,10 @@ BarWidget {
         next.push(current[i])
       }
     }
+    // No user-created groups left: the welcome stub takes over the bar.
+    if (next.length === 0) {
+      next = Logic.getDefaultGroups().slice()
+    }
     root.saveAllGroups(next)
   }
 
