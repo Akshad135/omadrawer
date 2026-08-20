@@ -258,9 +258,15 @@ Item {
 
               delegate: DrawerCard {
                 groupData: modelData
+                isExpanded: host ? host.isGroupExpanded(modelData.id) : false
                 fontFamily: root.fontFamily
                 foreground: root.colForeground
                 accent: root.colAccent
+                onToggleClicked: {
+                  if (host && host.toggleGroupExpanded) {
+                    host.toggleGroupExpanded(modelData.id)
+                  }
+                }
                 onEditClicked: {
                   root.editingGroup = modelData
                   root.currentView = "editor"

@@ -15,11 +15,30 @@ BarWidget {
 
   // ------------------------------------------------------------- State & Settings
   property var groupsList: []
+  property var expandedGroups: ({})
   property bool popupOpen: false
 
   function open() { popupOpen = true }
   function close() { popupOpen = false }
   function toggle() { popupOpen = !popupOpen }
+
+  function isGroupExpanded(groupId) {
+    return expandedGroups[groupId] === true
+  }
+
+  function toggleGroupExpanded(groupId) {
+    var next = {}
+    for (var k in expandedGroups) next[k] = expandedGroups[k]
+    next[groupId] = !next[groupId]
+    expandedGroups = next
+  }
+
+  function setGroupExpanded(groupId, val) {
+    var next = {}
+    for (var k in expandedGroups) next[k] = expandedGroups[k]
+    next[groupId] = (val === true)
+    expandedGroups = next
+  }
 
   // ------------------------------------------------------------- Appearance
   readonly property color colForeground: Color.foreground
@@ -93,30 +112,51 @@ BarWidget {
     groupsFile.reload()
   }
 
-  // ------------------------------------------------------------- Top Bar UI Icon
-  implicitWidth: button.implicitWidth
-  implicitHeight: button.implicitHeight
-  visible: button.visible
+  // ------------------------------------------------------------- Top Bar UI Layout
+  implicitWidth: barRow.implicitWidth
+  implicitHeight: barRow.implicitHeight
+  width: implicitWidth
+  height: implicitHeight
 
-  WidgetButton {
-    id: button
-    anchors.fill: parent
-    bar: root.bar
-    text: "󰏖"
-    active: root.popupOpen
-    useActiveColor: true
-    activeColor: colAccent
-    tooltipText: "OmaDrawer (" + (root.groupsList ? root.groupsList.length : 0) + " groups)"
+  Row {
+    id: barRow
+    spacing: 0
+    anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
-    onPressed: function(b) {
-      root.toggle()
+    // 1. OmaDrawer Manager Icon Button
+    WidgetButton {
+      id: managerButton
+      bar: root.bar
+      text: "󰏖"
+      active: root.popupOpen
+      useActiveColor: true
+      activeColor: root.colAccent
+      tooltipText: "OmaDrawer Manager (" + (root.groupsList ? root.groupsList.length : 0) + " groups)"
+
+      onPressed: function(buttonCode) {
+        root.toggle()
+      }
+    }
+
+    // 2. Active Drawer Groups on Top Bar
+    Repeater {
+      model: root.groupsList
+
+      DrawerGroupItem {
+        required property var modelData
+        groupData: modelData
+        bar: root.bar
+        expanded: root.isGroupExpanded(modelData.id)
+        onToggleExpanded: root.toggleGroupExpanded(modelData.id)
+        onOpenManager: root.open()
+      }
     }
   }
 
   // ------------------------------------------------------------- Popup Drawer Manager
   KeyboardPanel {
     id: popup
-    anchorItem: button
+    anchorItem: managerButton
     bar: root.bar
     owner: root
     open: root.popupOpen
@@ -143,6 +183,7 @@ BarWidget {
     function open(): void { root.open() }
     function close(): void { root.close() }
     function toggle(): void { root.toggle() }
+    function toggleGroup(groupId: string): void { root.toggleGroupExpanded(groupId) }
     function reload(): void { root.refreshPlugins() }
   }
 
