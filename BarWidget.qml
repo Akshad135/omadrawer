@@ -16,6 +16,7 @@ BarWidget {
   // ------------------------------------------------------------- State & Settings
   property var groupsList: []
   property var expandedGroups: ({})
+  property string slideDirection: "right" // "right" | "left"
   property bool popupOpen: false
 
   function open() { popupOpen = true }
@@ -38,6 +39,14 @@ BarWidget {
     for (var k in expandedGroups) next[k] = expandedGroups[k]
     next[groupId] = (val === true)
     expandedGroups = next
+  }
+
+  function updateSetting(key, val) {
+    if (key === "slideDirection") {
+      root.slideDirection = val
+    }
+    var serialized = Logic.serializeData(root.groupsList, { slideDirection: root.slideDirection })
+    groupsFile.setText(serialized)
   }
 
   // ------------------------------------------------------------- Appearance
@@ -68,49 +77,132 @@ BarWidget {
 
   function syncShellLayout(groups) {
     if (!bar || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
+
+    // 1. Build map of all plugin IDs that are currently in at least one drawer group
     var groupedMap = {}
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i]
       if (g && g.plugins && Array.isArray(g.plugins)) {
         for (var j = 0; j < g.plugins.length; j++) {
-          groupedMap[g.plugins[j]] = true
+          var pid = String(g.plugins[j]).trim()
+          if (pid) groupedMap[pid] = true
         }
       }
     }
 
     bar.shell.mutateShellConfig(function(config) {
-      if (!config || !config.bar || !config.bar.layout) return
+      if (!config) return
+      if (!Array.isArray(config.plugins)) config.plugins = []
+      if (!config.bar || !config.bar.layout) return
+
+      // Disabled plugins list
+      var disabledMap = {}
+      if (Array.isArray(config.disabledPlugins)) {
+        for (var d = 0; d < config.disabledPlugins.length; d++) {
+          disabledMap[config.disabledPlugins[d]] = true
+        }
+      }
+
+      // 2. Ensure all grouped plugins are present in config.plugins
+      var existingPluginIds = {}
+      for (var p = 0; p < config.plugins.length; p++) {
+        var pEntry = config.plugins[p]
+        var pId = typeof pEntry === "string" ? pEntry : (pEntry && pEntry.id ? pEntry.id : "")
+        if (pId) existingPluginIds[pId] = true
+      }
+
+      for (var gid in groupedMap) {
+        if (!existingPluginIds[gid]) {
+          config.plugins.push({ id: gid })
+          existingPluginIds[gid] = true
+        }
+      }
+
+      if (!existingPluginIds["akshad.omadrawer"]) {
+        config.plugins.push({ id: "akshad.omadrawer" })
+        existingPluginIds["akshad.omadrawer"] = true
+      }
+
+      // 3. Find which plugins are currently placed in any bar section (left, center, right)
       var sections = ["left", "center", "right"]
+      var placedOnBar = {}
       for (var s = 0; s < sections.length; s++) {
         var sec = sections[s]
         var list = config.bar.layout[sec]
         if (Array.isArray(list)) {
-          var filtered = list.filter(function(entry) {
-            var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "")
-            if (id === "akshad.omadrawer") return true
-            return !groupedMap[id]
-          })
-          if (filtered.length !== list.length) {
-            config.bar.layout[sec] = filtered
+          for (var k = 0; k < list.length; k++) {
+            var item = list[k]
+            var itemId = typeof item === "string" ? item : (item && item.id ? item.id : "")
+            if (itemId) placedOnBar[itemId] = true
           }
+        }
+      }
+
+      // 4. Remove all grouped plugins from bar.layout so they only live inside their drawer
+      for (var s2 = 0; s2 < sections.length; s2++) {
+        var sec2 = sections[s2]
+        var list2 = config.bar.layout[sec2]
+        if (Array.isArray(list2)) {
+          config.bar.layout[sec2] = list2.filter(function(entry) {
+            var entryId = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "")
+            if (entryId === "akshad.omadrawer") return true
+            if (groupedMap[entryId]) {
+              delete placedOnBar[entryId]
+              return false
+            }
+            return true
+          })
+        }
+      }
+
+      // 5. Restore un-grouped plugins back to bar.layout.right
+      if (!Array.isArray(config.bar.layout.right)) config.bar.layout.right = []
+
+      // Locate insertion index near akshad.omadrawer
+      var drawerIndex = -1
+      for (var r = 0; r < config.bar.layout.right.length; r++) {
+        var rEntry = config.bar.layout.right[r]
+        var rId = typeof rEntry === "string" ? rEntry : (rEntry && rEntry.id ? rEntry.id : "")
+        if (rId === "akshad.omadrawer") {
+          drawerIndex = r
+          break
+        }
+      }
+
+      var insertPos = drawerIndex !== -1 ? drawerIndex + 1 : config.bar.layout.right.length
+
+      // Check all plugins in config.plugins
+      for (var cp = 0; cp < config.plugins.length; cp++) {
+        var cEntry = config.plugins[cp]
+        var cId = typeof cEntry === "string" ? cEntry : (cEntry && cEntry.id ? cEntry.id : "")
+        if (!cId || cId === "akshad.omadrawer" || groupedMap[cId] || disabledMap[cId]) continue
+
+        if (!placedOnBar[cId]) {
+          var newEntry = typeof cEntry === "object" ? JSON.parse(JSON.stringify(cEntry)) : { id: cId }
+          config.bar.layout.right.splice(insertPos, 0, newEntry)
+          placedOnBar[cId] = true
+          insertPos++
         }
       }
     })
   }
 
   function loadGroups(raw) {
-    var parsed = Logic.parseGroups(raw)
-    root.groupsList = parsed
+    var data = Logic.parseData(raw)
+    root.groupsList = data.groups
+    if (data.settings && data.settings.slideDirection) {
+      root.slideDirection = data.settings.slideDirection
+    }
     if (!raw || raw.trim().length === 0) {
-      root.saveAllGroups(parsed)
+      root.saveAllGroups(data.groups)
     } else {
-      Qt.callLater(function() { root.syncShellLayout(parsed) })
+      Qt.callLater(function() { root.syncShellLayout(data.groups) })
     }
   }
 
   function saveAllGroups(list) {
     root.groupsList = list
-    var serialized = Logic.serializeGroups(list)
+    var serialized = Logic.serializeData(list, { slideDirection: root.slideDirection })
     groupsFile.setText(serialized)
     Qt.callLater(function() { root.syncShellLayout(list) })
   }
@@ -181,6 +273,7 @@ BarWidget {
         required property var modelData
         groupData: modelData
         bar: root.bar
+        slideDirection: root.slideDirection
         expanded: root.isGroupExpanded(modelData.id)
         onToggleExpanded: root.toggleGroupExpanded(modelData.id)
         onOpenManager: root.open()

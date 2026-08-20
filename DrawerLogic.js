@@ -74,28 +74,41 @@ function generateGroupId() {
   return "group-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6);
 }
 
-function parseGroups(rawText) {
+function parseData(rawText) {
+  var defaults = {
+    settings: {
+      slideDirection: "right"
+    },
+    groups: getDefaultGroups()
+  };
   if (!rawText || rawText.trim().length === 0) {
-    return getDefaultGroups();
+    return defaults;
   }
   try {
     var data = JSON.parse(rawText);
     if (Array.isArray(data)) {
-      return data;
+      return {
+        settings: { slideDirection: "right" },
+        groups: data
+      };
     }
-    if (data && Array.isArray(data.groups)) {
-      return data.groups;
+    if (data && typeof data === "object") {
+      return {
+        settings: data.settings || { slideDirection: "right" },
+        groups: Array.isArray(data.groups) ? data.groups : getDefaultGroups()
+      };
     }
   } catch (e) {
-    console.warn("DrawerLogic: Failed to parse groups json:", e);
+    console.warn("DrawerLogic: Failed to parse data json:", e);
   }
-  return getDefaultGroups();
+  return defaults;
 }
 
-function serializeGroups(groupsList) {
+function serializeData(groupsList, settings) {
   return JSON.stringify({
     version: 1,
     updatedAt: new Date().toISOString(),
+    settings: settings || { slideDirection: "right" },
     groups: groupsList || []
   }, null, 2) + "\n";
 }

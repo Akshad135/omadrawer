@@ -10,12 +10,14 @@ Item {
   property var groupData: null
   property var bar: null
   property bool expanded: false
+  property string slideDirection: "right" // "right" | "left"
 
   signal toggleExpanded()
   signal openManager()
 
   readonly property color colAccent: Color.accent
   readonly property var pluginsList: (groupData && groupData.plugins) ? groupData.plugins : []
+  readonly property bool isSlideLeft: slideDirection === "left"
 
   implicitWidth: groupButton.implicitWidth + sliderArea.implicitWidth
   implicitHeight: Math.max(groupButton.implicitHeight, sliderArea.implicitHeight)
@@ -26,6 +28,7 @@ Item {
     id: groupRow
     spacing: 0
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+    layoutDirection: root.isSlideLeft ? Qt.RightToLeft : Qt.LeftToRight
 
     // 1. Group Icon Button on Top Bar
     WidgetButton {
@@ -46,7 +49,7 @@ Item {
       }
     }
 
-    // 2. Sliding Drawer Container - exactly as inactiveHorizontalArea in Indicators.qml
+    // 2. Sliding Drawer Container
     Item {
       id: sliderArea
       clip: true
@@ -66,6 +69,7 @@ Item {
         id: pluginsBlock
         spacing: 0
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        layoutDirection: root.isSlideLeft ? Qt.RightToLeft : Qt.LeftToRight
 
         Repeater {
           model: root.pluginsList

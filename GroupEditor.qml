@@ -8,11 +8,30 @@ import "DrawerLogic.js" as Logic
 Rectangle {
   id: root
 
+  property var host: null
   property var initialGroup: null
   property string fontFamily: Style.font.family
   property color foreground: Color.foreground
   property color accent: Color.accent
-  property var availablePlugins: Logic.KNOWN_PLUGINS
+  property string viewMode: "editor" // "editor" | "picker"
+
+  readonly property var availablePlugins: {
+    var list = Logic.KNOWN_PLUGINS.slice()
+    var seen = {}
+    for (var i = 0; i < list.length; i++) seen[list[i].id] = true
+
+    if (host && host.bar && host.bar.barWidgetRegistry && host.bar.barWidgetRegistry.availableIds) {
+      var ids = host.bar.barWidgetRegistry.availableIds()
+      for (var j = 0; j < ids.length; j++) {
+        var id = ids[j]
+        if (!seen[id] && id !== "akshad.omadrawer") {
+          list.push(Logic.findPluginMeta(id))
+          seen[id] = true
+        }
+      }
+    }
+    return list
+  }
 
   signal saveGroup(var groupData)
   signal cancel()
@@ -21,7 +40,6 @@ Rectangle {
   property string formId: ""
   property string formName: ""
   property string formIcon: "󰏖"
-  property string formDescription: ""
   property var selectedPluginIds: []
 
   readonly property color colBorder: Style.normalBorderFor(foreground, accent)
@@ -32,15 +50,14 @@ Rectangle {
       formId = group.id || ""
       formName = group.name || ""
       formIcon = group.icon || "󰏖"
-      formDescription = group.description || ""
       selectedPluginIds = group.plugins ? group.plugins.slice() : []
     } else {
       formId = ""
       formName = ""
       formIcon = "󰏖"
-      formDescription = ""
       selectedPluginIds = []
     }
+    viewMode = "editor"
   }
 
   onInitialGroupChanged: loadGroup(initialGroup)
@@ -61,13 +78,31 @@ Rectangle {
     selectedPluginIds = list
   }
 
+  function movePluginUp(index) {
+    if (index <= 0 || index >= selectedPluginIds.length) return
+    var list = selectedPluginIds.slice()
+    var temp = list[index - 1]
+    list[index - 1] = list[index]
+    list[index] = temp
+    selectedPluginIds = list
+  }
+
+  function movePluginDown(index) {
+    if (index < 0 || index >= selectedPluginIds.length - 1) return
+    var list = selectedPluginIds.slice()
+    var temp = list[index + 1]
+    list[index + 1] = list[index]
+    list[index] = temp
+    selectedPluginIds = list
+  }
+
   function submit() {
     if (formName.trim().length === 0) return
     var saved = {
       id: formId ? formId : Logic.generateGroupId(),
       name: formName.trim(),
       icon: formIcon.trim() || "󰏖",
-      description: formDescription.trim(),
+      description: "",
       enabled: true,
       plugins: selectedPluginIds
     }
@@ -76,8 +111,10 @@ Rectangle {
 
   color: "transparent"
 
+  // ------------------------------------------------------------- 1. MAIN GROUP EDITOR VIEW
   ColumnLayout {
     anchors.fill: parent
+    visible: root.viewMode === "editor"
     spacing: Style.space(8)
 
     // Form Header: [‹ Back] [Title]
@@ -124,7 +161,7 @@ Rectangle {
     Flickable {
       Layout.fillWidth: true
       Layout.fillHeight: true
-      contentHeight: formContent.implicitHeight + Style.space(10)
+      contentHeight: formContent.implicitHeight + Style.space(12)
       clip: true
       boundsBehavior: Flickable.StopAtBounds
 
@@ -219,31 +256,7 @@ Rectangle {
           }
         }
 
-        // Field 3: Short Description
-        ColumnLayout {
-          Layout.fillWidth: true
-          spacing: Style.space(4)
-
-          Text {
-            text: "DESCRIPTION (OPTIONAL)"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            color: Qt.darker(root.foreground, 1.4)
-          }
-
-          TextField {
-            id: descField
-            Layout.fillWidth: true
-            text: root.formDescription
-            placeholderText: "e.g. Quick access to daily plugins"
-            foreground: root.foreground
-            accent: root.accent
-            onTextChanged: root.formDescription = text
-          }
-        }
-
-        // Field 4: Select Plugins to Include
+        // Field 3: Current Added Plugins List with Reordering
         ColumnLayout {
           Layout.fillWidth: true
           spacing: Style.space(6)
@@ -251,33 +264,54 @@ Rectangle {
           RowLayout {
             Layout.fillWidth: true
             Text {
-              text: "ASSIGN PLUGINS (" + root.selectedPluginIds.length + " SELECTED)"
+              text: "GROUP PLUGINS (" + root.selectedPluginIds.length + ")"
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               font.bold: true
               color: Qt.darker(root.foreground, 1.4)
             }
             Item { Layout.fillWidth: true }
+            Text {
+              text: "Order: Top to Bottom"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              color: Qt.darker(root.foreground, 1.5)
+            }
           }
 
+          // Empty State if no plugins assigned yet
+          Rectangle {
+            visible: root.selectedPluginIds.length === 0
+            Layout.fillWidth: true
+            implicitHeight: Style.space(56)
+            radius: Style.cornerRadius
+            color: Util.alpha(root.foreground, 0.03)
+            border.color: Util.alpha(root.colBorder, 0.2)
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "No plugins added yet. Click 'Update Plugins' below."
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              color: Qt.darker(root.foreground, 1.4)
+            }
+          }
+
+          // Ordered Plugins List
           Repeater {
-            model: root.availablePlugins
+            model: root.selectedPluginIds
 
             delegate: Rectangle {
-              readonly property bool isSelected: root.isPluginSelected(modelData.id)
+              id: pluginItemDelegate
+              readonly property var meta: Logic.findPluginMeta(modelData)
+              readonly property int itemIndex: index
               Layout.fillWidth: true
-              implicitHeight: Style.space(40)
+              implicitHeight: Style.space(38)
               radius: Style.cornerRadius
-              color: isSelected 
-                ? Util.alpha(root.accent, 0.12) 
-                : (pMouse.containsMouse ? Util.alpha(root.foreground, 0.07) : Util.alpha(root.foreground, 0.03))
-              border.color: isSelected 
-                ? Util.alpha(root.accent, 0.6) 
-                : (pMouse.containsMouse ? Util.alpha(root.colBorder, 0.5) : Util.alpha(root.colBorder, 0.2))
+              color: Util.alpha(root.foreground, 0.04)
+              border.color: Util.alpha(root.colBorder, 0.25)
               border.width: 1
-
-              Behavior on color { ColorAnimation { duration: 120 } }
-              Behavior on border.color { ColorAnimation { duration: 120 } }
 
               RowLayout {
                 anchors.fill: parent
@@ -285,84 +319,154 @@ Rectangle {
                 anchors.rightMargin: Style.space(8)
                 spacing: Style.space(8)
 
-                // Checkbox / Indicator
+                // Index Badge
                 Rectangle {
-                  width: Style.space(18)
-                  height: Style.space(18)
-                  radius: Style.cornerRadius
-                  color: isSelected ? root.accent : "transparent"
-                  border.color: isSelected ? root.accent : Qt.darker(root.foreground, 1.5)
-                  border.width: 1.5
+                  width: Style.space(20)
+                  height: Style.space(20)
+                  radius: width / 2
+                  color: Util.alpha(root.accent, 0.2)
+                  border.color: Util.alpha(root.accent, 0.5)
+                  border.width: 1
 
                   Text {
                     anchors.centerIn: parent
-                    text: "✓"
+                    text: String(itemIndex + 1)
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
+                    font.pixelSize: 10
                     font.bold: true
-                    color: "#12131a"
-                    visible: isSelected
+                    color: root.accent
                   }
                 }
 
                 // Plugin Icon
                 Text {
-                  text: modelData.icon || "󰏖"
+                  text: meta.icon || "󰏖"
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
-                  color: isSelected ? root.accent : root.foreground
+                  color: root.accent
                 }
 
-                // Plugin Name & Desc
-                ColumnLayout {
+                // Plugin Name
+                Text {
                   Layout.fillWidth: true
-                  spacing: 0
-
-                  Text {
-                    text: modelData.name || modelData.id
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: isSelected
-                    color: root.foreground
-                  }
-
-                  Text {
-                    text: modelData.desc || modelData.category || ""
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    color: Qt.darker(root.foreground, 1.5)
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                  }
+                  text: meta.name || modelData
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: true
+                  color: root.foreground
+                  elide: Text.ElideRight
                 }
 
-                // Category Tag
+                // Action: Move Up Button (▲)
                 Rectangle {
-                  height: Style.space(16)
-                  width: catText.implicitWidth + Style.space(8)
+                  width: Style.space(28)
+                  height: Style.space(26)
                   radius: Style.cornerRadius
-                  color: Util.alpha(root.foreground, 0.06)
-                  border.color: Util.alpha(root.foreground, 0.15)
+                  color: itemIndex > 0 
+                    ? (upHover.containsMouse ? Util.alpha(root.accent, 0.3) : Util.alpha(root.foreground, 0.08))
+                    : Util.alpha(root.foreground, 0.02)
+                  border.color: itemIndex > 0 
+                    ? (upHover.containsMouse ? root.accent : Util.alpha(root.colBorder, 0.3))
+                    : "transparent"
                   border.width: 1
+                  opacity: itemIndex > 0 ? 1.0 : 0.25
 
                   Text {
-                    id: catText
                     anchors.centerIn: parent
-                    text: modelData.category || "Plugin"
+                    text: "▲"
                     font.family: root.fontFamily
-                    font.pixelSize: 9
-                    color: Qt.darker(root.foreground, 1.3)
+                    font.pixelSize: 11
+                    color: itemIndex > 0 
+                      ? (upHover.containsMouse ? root.accent : root.foreground)
+                      : Qt.darker(root.foreground, 1.8)
+                  }
+
+                  MouseArea {
+                    id: upHover
+                    anchors.fill: parent
+                    enabled: itemIndex > 0
+                    hoverEnabled: true
+                    cursorShape: itemIndex > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: root.movePluginUp(itemIndex)
+                  }
+                }
+
+                // Action: Move Down Button (▼)
+                Rectangle {
+                  width: Style.space(28)
+                  height: Style.space(26)
+                  radius: Style.cornerRadius
+                  color: itemIndex < root.selectedPluginIds.length - 1
+                    ? (downHover.containsMouse ? Util.alpha(root.accent, 0.3) : Util.alpha(root.foreground, 0.08))
+                    : Util.alpha(root.foreground, 0.02)
+                  border.color: itemIndex < root.selectedPluginIds.length - 1
+                    ? (downHover.containsMouse ? root.accent : Util.alpha(root.colBorder, 0.3))
+                    : "transparent"
+                  border.width: 1
+                  opacity: itemIndex < root.selectedPluginIds.length - 1 ? 1.0 : 0.25
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "▼"
+                    font.family: root.fontFamily
+                    font.pixelSize: 11
+                    color: itemIndex < root.selectedPluginIds.length - 1
+                      ? (downHover.containsMouse ? root.accent : root.foreground)
+                      : Qt.darker(root.foreground, 1.8)
+                  }
+
+                  MouseArea {
+                    id: downHover
+                    anchors.fill: parent
+                    enabled: itemIndex < root.selectedPluginIds.length - 1
+                    hoverEnabled: true
+                    cursorShape: itemIndex < root.selectedPluginIds.length - 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: root.movePluginDown(itemIndex)
                   }
                 }
               }
+            }
+          }
 
-              MouseArea {
-                id: pMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.togglePluginSelection(modelData.id)
+          // "+ Update Plugins" Button
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(36)
+            radius: Style.cornerRadius
+            color: updHover.containsMouse ? Util.alpha(root.accent, 0.18) : Util.alpha(root.accent, 0.08)
+            border.color: updHover.containsMouse ? root.accent : Util.alpha(root.accent, 0.4)
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+
+            RowLayout {
+              anchors.centerIn: parent
+              spacing: Style.space(6)
+
+              Text {
+                text: "󰐕"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                font.bold: true
+                color: root.accent
               }
+
+              Text {
+                text: root.selectedPluginIds.length === 0 ? "Add Plugins to Group" : "Update Plugins"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                font.bold: true
+                color: root.foreground
+              }
+            }
+
+            MouseArea {
+              id: updHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.viewMode = "picker"
             }
           }
         }
@@ -435,11 +539,217 @@ Rectangle {
         MouseArea {
           id: saveHover
           anchors.fill: parent
-          enabled: parent.canSave
+          enabled: canSave
           hoverEnabled: true
-          cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+          cursorShape: canSave ? Qt.PointingHandCursor : Qt.ArrowCursor
           onClicked: root.submit()
         }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- 2. PLUGIN SELECTION CHECKLIST VIEW
+  ColumnLayout {
+    anchors.fill: parent
+    visible: root.viewMode === "picker"
+    spacing: Style.space(8)
+
+    // Picker Header: [‹ Back] [Title]
+    RowLayout {
+      Layout.fillWidth: true
+      spacing: Style.space(8)
+
+      Rectangle {
+        width: Style.space(28)
+        height: Style.space(28)
+        radius: Style.cornerRadius
+        color: pickerBackHover.containsMouse ? Util.alpha(root.foreground, 0.12) : Util.alpha(root.foreground, 0.05)
+        border.color: Util.alpha(root.colBorder, 0.3)
+        border.width: 1
+
+        Text {
+          anchors.centerIn: parent
+          text: "‹"
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.heading
+          color: root.foreground
+        }
+
+        MouseArea {
+          id: pickerBackHover
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: root.viewMode = "editor"
+        }
+      }
+
+      ColumnLayout {
+        Layout.fillWidth: true
+        spacing: 0
+
+        Text {
+          text: "Select Plugins for Group"
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.subtitle
+          font.bold: true
+          color: root.foreground
+        }
+
+        Text {
+          text: root.selectedPluginIds.length + " selected (toggle to add/remove)"
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          color: root.accent
+        }
+      }
+    }
+
+    // Scrollable Checklist
+    Flickable {
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      contentHeight: pickerList.implicitHeight + Style.space(10)
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
+
+      ColumnLayout {
+        id: pickerList
+        width: parent.width
+        spacing: Style.space(6)
+
+        Repeater {
+          model: root.availablePlugins
+
+          delegate: Rectangle {
+            readonly property bool isSelected: root.isPluginSelected(modelData.id)
+            Layout.fillWidth: true
+            implicitHeight: Style.space(40)
+            radius: Style.cornerRadius
+            color: isSelected 
+              ? Util.alpha(root.accent, 0.12) 
+              : (pMouse.containsMouse ? Util.alpha(root.foreground, 0.07) : Util.alpha(root.foreground, 0.03))
+            border.color: isSelected 
+              ? Util.alpha(root.accent, 0.6) 
+              : (pMouse.containsMouse ? Util.alpha(root.colBorder, 0.5) : Util.alpha(root.colBorder, 0.2))
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 100 } }
+            Behavior on border.color { ColorAnimation { duration: 100 } }
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.leftMargin: Style.space(8)
+              anchors.rightMargin: Style.space(8)
+              spacing: Style.space(8)
+
+              // Checkbox / Indicator
+              Rectangle {
+                width: Style.space(18)
+                height: Style.space(18)
+                radius: Style.cornerRadius
+                color: isSelected ? root.accent : "transparent"
+                border.color: isSelected ? root.accent : Qt.darker(root.foreground, 1.5)
+                border.width: 1.5
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "✓"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  color: "#12131a"
+                  visible: isSelected
+                }
+              }
+
+              // Plugin Icon
+              Text {
+                text: modelData.icon || "󰏖"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                color: isSelected ? root.accent : root.foreground
+              }
+
+              // Plugin Name & Category
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                Text {
+                  text: modelData.name || modelData.id
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: isSelected
+                  color: root.foreground
+                }
+
+                Text {
+                  text: modelData.desc || modelData.category || ""
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  color: Qt.darker(root.foreground, 1.5)
+                  elide: Text.ElideRight
+                  Layout.fillWidth: true
+                }
+              }
+
+              // Category Tag
+              Rectangle {
+                height: Style.space(16)
+                width: catText.implicitWidth + Style.space(8)
+                radius: Style.cornerRadius
+                color: Util.alpha(root.foreground, 0.06)
+                border.color: Util.alpha(root.foreground, 0.15)
+                border.width: 1
+
+                Text {
+                  id: catText
+                  anchors.centerIn: parent
+                  text: modelData.category || "Plugin"
+                  font.family: root.fontFamily
+                  font.pixelSize: 9
+                  color: Qt.darker(root.foreground, 1.3)
+                }
+              }
+            }
+
+            MouseArea {
+              id: pMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.togglePluginSelection(modelData.id)
+            }
+          }
+        }
+      }
+    }
+
+    // Done Selecting Button
+    Rectangle {
+      Layout.fillWidth: true
+      Layout.preferredHeight: Style.space(34)
+      radius: Style.cornerRadius
+      color: donePickHover.containsMouse ? root.accent : Util.alpha(root.accent, 0.85)
+      border.color: root.accent
+      border.width: 1
+
+      Text {
+        anchors.centerIn: parent
+        text: "Done Selecting (" + root.selectedPluginIds.length + " chosen)"
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+        font.bold: true
+        color: "#12131a"
+      }
+
+      MouseArea {
+        id: donePickHover
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.viewMode = "editor"
       }
     }
   }

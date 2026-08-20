@@ -105,15 +105,6 @@ Rectangle {
             }
           }
         }
-
-        Text {
-          text: root.groupData ? (root.groupData.description || "Drawer group") : ""
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.caption
-          color: Qt.darker(root.foreground, 1.45)
-          elide: Text.ElideRight
-          Layout.fillWidth: true
-        }
       }
 
       // Action Buttons: Edit & Delete

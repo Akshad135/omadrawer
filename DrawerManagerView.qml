@@ -10,7 +10,7 @@ Item {
 
   property var host: null
   property var groupsList: host ? host.groupsList : []
-  property string currentView: "list" // "list" | "editor" | "delete_confirm"
+  property string currentView: "list" // "list" | "editor" | "settings" | "delete_confirm"
   property var editingGroup: null
   property var deletingGroup: null
 
@@ -20,6 +20,7 @@ Item {
   readonly property color colBorder: Style.normalBorderFor(Color.foreground, Color.accent)
   readonly property color colCardBg: Style.normalFillFor(Color.foreground, Color.accent)
   readonly property string fontFamily: host && host.bar ? host.bar.fontFamily : Style.font.family
+  readonly property string activeSlideDirection: host ? (host.slideDirection || "right") : "right"
 
   implicitWidth: Style.space(420)
   implicitHeight: Style.space(510)
@@ -87,7 +88,9 @@ Item {
           }
 
           Text {
-            text: root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured"
+            text: root.currentView === "settings" 
+              ? "Preferences" 
+              : (root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colDim
@@ -96,30 +99,36 @@ Item {
 
         Item { Layout.fillWidth: true }
 
-        // Refresh / Rescan Button
+        // Settings Button (Top-Right)
         Rectangle {
           width: Style.space(28)
           height: Style.space(28)
           radius: Style.cornerRadius
-          color: refreshHover.containsMouse ? Util.alpha(Color.background, 0.8) : Util.alpha(Color.background, 0.4)
-          border.color: refreshHover.containsMouse ? colBorder : "transparent"
+          color: root.currentView === "settings"
+            ? Util.alpha(colAccent, 0.35)
+            : (settingsHover.containsMouse ? Util.alpha(Color.background, 0.8) : Util.alpha(Color.background, 0.4))
+          border.color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colBorder : "transparent")
           border.width: 1
 
           Text {
             anchors.centerIn: parent
-            text: "󰑐"
+            text: "󰒓"
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
-            color: refreshHover.containsMouse ? colForeground : colDim
+            color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colForeground : colDim)
           }
 
           MouseArea {
-            id: refreshHover
+            id: settingsHover
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-              if (host && host.refreshPlugins) host.refreshPlugins()
+              if (root.currentView === "settings") {
+                root.currentView = "list"
+              } else {
+                root.currentView = "settings"
+              }
             }
           }
         }
@@ -181,10 +190,10 @@ Item {
           Item { Layout.fillWidth: true }
 
           Text {
-            text: "Click a group to edit"
+            text: "Slide: " + (root.activeSlideDirection === "left" ? "Left 󰁍" : "Right 󰅂")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: Qt.darker(colForeground, 1.6)
+            color: colAccent
           }
         }
 
@@ -320,10 +329,260 @@ Item {
         }
       }
 
-      // 2. ADD / EDIT GROUP EDITOR VIEW
+      // 2. SETTINGS VIEW
+      ColumnLayout {
+        anchors.fill: parent
+        visible: root.currentView === "settings"
+        spacing: Style.space(12)
+
+        // Settings Header
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(8)
+
+          Rectangle {
+            width: Style.space(28)
+            height: Style.space(28)
+            radius: Style.cornerRadius
+            color: setBackHover.containsMouse ? Util.alpha(root.colForeground, 0.12) : Util.alpha(root.colForeground, 0.05)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "‹"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.heading
+              color: root.colForeground
+            }
+
+            MouseArea {
+              id: setBackHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.currentView = "list"
+            }
+          }
+
+          Text {
+            text: "Drawer Settings"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.subtitle
+            font.bold: true
+            color: root.colForeground
+            Layout.fillWidth: true
+          }
+        }
+
+        // Section: Slide Direction
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+
+          Text {
+            text: "DRAWER EXPANSION DIRECTION"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: Qt.darker(root.colForeground, 1.4)
+          }
+
+          Text {
+            text: "Select whether drawer plugins slide out to the left or right of the group icon on the top bar."
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: root.colDim
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+          }
+
+          // Option 1: Slide to Right
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(52)
+            radius: Style.cornerRadius
+            color: root.activeSlideDirection === "right"
+              ? Util.alpha(root.colAccent, 0.15)
+              : (rightOptHover.containsMouse ? Util.alpha(root.colForeground, 0.07) : Util.alpha(root.colForeground, 0.03))
+            border.color: root.activeSlideDirection === "right"
+              ? root.colAccent
+              : (rightOptHover.containsMouse ? Util.alpha(root.colAccent, 0.4) : Util.alpha(root.colBorder, 0.25))
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.leftMargin: Style.space(12)
+              anchors.rightMargin: Style.space(12)
+              spacing: Style.space(10)
+
+              // Radio / Check Icon
+              Rectangle {
+                width: Style.space(22)
+                height: Style.space(22)
+                radius: width / 2
+                color: root.activeSlideDirection === "right" ? root.colAccent : "transparent"
+                border.color: root.activeSlideDirection === "right" ? root.colAccent : Qt.darker(root.colForeground, 1.4)
+                border.width: 1.5
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "✓"
+                  font.family: root.fontFamily
+                  font.pixelSize: 10
+                  font.bold: true
+                  color: "#12131a"
+                  visible: root.activeSlideDirection === "right"
+                }
+              }
+
+              // Text info
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                Text {
+                  text: "Slide to Right  󰅂"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: root.activeSlideDirection === "right"
+                  color: root.colForeground
+                }
+
+                Text {
+                  text: "Group icon sits on left, plugins expand towards the right"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  color: Qt.darker(root.colForeground, 1.4)
+                }
+              }
+            }
+
+            MouseArea {
+              id: rightOptHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (host && host.updateSetting) host.updateSetting("slideDirection", "right")
+              }
+            }
+          }
+
+          // Option 2: Slide to Left
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(52)
+            radius: Style.cornerRadius
+            color: root.activeSlideDirection === "left"
+              ? Util.alpha(root.colAccent, 0.15)
+              : (leftOptHover.containsMouse ? Util.alpha(root.colForeground, 0.07) : Util.alpha(root.colForeground, 0.03))
+            border.color: root.activeSlideDirection === "left"
+              ? root.colAccent
+              : (leftOptHover.containsMouse ? Util.alpha(root.colAccent, 0.4) : Util.alpha(root.colBorder, 0.25))
+            border.width: 1
+
+            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.leftMargin: Style.space(12)
+              anchors.rightMargin: Style.space(12)
+              spacing: Style.space(10)
+
+              // Radio / Check Icon
+              Rectangle {
+                width: Style.space(22)
+                height: Style.space(22)
+                radius: width / 2
+                color: root.activeSlideDirection === "left" ? root.colAccent : "transparent"
+                border.color: root.activeSlideDirection === "left" ? root.colAccent : Qt.darker(root.colForeground, 1.4)
+                border.width: 1.5
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "✓"
+                  font.family: root.fontFamily
+                  font.pixelSize: 10
+                  font.bold: true
+                  color: "#12131a"
+                  visible: root.activeSlideDirection === "left"
+                }
+              }
+
+              // Text info
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+
+                Text {
+                  text: "Slide to Left  󰁍"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: root.activeSlideDirection === "left"
+                  color: root.colForeground
+                }
+
+                Text {
+                  text: "Group icon sits on right, plugins expand towards the left"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  color: Qt.darker(root.colForeground, 1.4)
+                }
+              }
+            }
+
+            MouseArea {
+              id: leftOptHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (host && host.updateSetting) host.updateSetting("slideDirection", "left")
+              }
+            }
+          }
+        }
+
+        Item { Layout.fillHeight: true }
+
+        // Done Button
+        Rectangle {
+          Layout.fillWidth: true
+          Layout.preferredHeight: Style.space(36)
+          radius: Style.cornerRadius
+          color: doneHover.containsMouse ? root.colAccent : Util.alpha(root.colAccent, 0.85)
+          border.color: root.colAccent
+          border.width: 1
+
+          Text {
+            anchors.centerIn: parent
+            text: "Done"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+            font.bold: true
+            color: "#12131a"
+          }
+
+          MouseArea {
+            id: doneHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.currentView = "list"
+          }
+        }
+      }
+
+      // 3. ADD / EDIT GROUP EDITOR VIEW
       GroupEditor {
         anchors.fill: parent
         visible: root.currentView === "editor"
+        host: root.host
         initialGroup: root.editingGroup
         fontFamily: root.fontFamily
         foreground: root.colForeground
@@ -339,7 +598,7 @@ Item {
         }
       }
 
-      // 3. DELETE CONFIRMATION VIEW
+      // 4. DELETE CONFIRMATION VIEW
       Rectangle {
         anchors.fill: parent
         visible: root.currentView === "delete_confirm"
