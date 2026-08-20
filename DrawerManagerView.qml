@@ -401,7 +401,7 @@ Item {
                   spacing: Style.space(5)
 
                   Text {
-                    text: "󰏖"
+                    text: "󰀻"
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     color: root.activeDisplayMode === "icon" ? "#12131a" : root.colForeground
@@ -443,7 +443,7 @@ Item {
                   spacing: Style.space(5)
 
                   Text {
-                    text: "󰅀"
+                    text: "󰀬"
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     color: root.activeDisplayMode === "name" ? "#12131a" : root.colForeground
@@ -485,7 +485,7 @@ Item {
                   spacing: Style.space(5)
 
                   Text {
-                    text: "󰚌"
+                    text: "󰍜"
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.bodySmall
                     color: root.activeDisplayMode === "both" ? "#12131a" : root.colForeground
@@ -517,8 +517,8 @@ Item {
           Text {
             text: {
               if (root.activeDisplayMode === "name") return "Top bar shows only the group name (e.g. Games)."
-              if (root.activeDisplayMode === "both") return "Top bar shows both the icon and group name (e.g. 󰵪 Games)."
-              return "Top bar shows only the group icon (e.g. 󰵪)."
+              if (root.activeDisplayMode === "both") return "Top bar shows both the icon and group name (e.g. 󰊖 Games)."
+              return "Top bar shows only the group icon (e.g. 󰊖)."
             }
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
