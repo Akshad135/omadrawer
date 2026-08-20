@@ -99,6 +99,29 @@ Rectangle {
             color: Qt.darker(root.foreground, 1.25)
           }
         }
+
+        // Position pill
+        Rectangle {
+          height: Style.space(16)
+          width: posText.implicitWidth + Style.space(10)
+          radius: Style.cornerRadius
+          color: Util.alpha(root.accent, 0.12)
+          border.color: Util.alpha(root.accent, 0.35)
+          border.width: 1
+
+          Text {
+            id: posText
+            anchors.centerIn: parent
+            text: {
+              var pos = root.groupData ? (root.groupData.position || "right") : "right"
+              return pos.charAt(0).toUpperCase() + pos.slice(1)
+            }
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: root.accent
+          }
+        }
       }
 
       // Spacer pushing Edit & Delete to the right side

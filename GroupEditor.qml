@@ -19,6 +19,7 @@ Rectangle {
   property string formId: ""
   property string formName: ""
   property string formIcon: "󰏖"
+  property string formPosition: host ? host.currentRegion : "right"
   property var selectedPluginIds: []
 
   readonly property var otherGroupsPluginMap: {
@@ -99,7 +100,6 @@ Rectangle {
       if (disabledMap[id]) continue
       if (otherGroupsPluginMap[id]) continue
 
-      // Resolve metadata
       var meta = Logic.findPluginMeta(id)
       result.push(meta)
     }
@@ -118,11 +118,13 @@ Rectangle {
       formId = group.id || ""
       formName = group.name || ""
       formIcon = group.icon || "󰏖"
+      formPosition = group.position || (host ? host.currentRegion : "right")
       selectedPluginIds = group.plugins ? group.plugins.slice() : []
     } else {
       formId = ""
       formName = ""
       formIcon = "󰏖"
+      formPosition = host ? host.currentRegion : "right"
       selectedPluginIds = []
     }
     viewMode = "editor"
@@ -170,6 +172,7 @@ Rectangle {
       id: formId ? formId : Logic.generateGroupId(),
       name: formName.trim(),
       icon: formIcon.trim() || "󰏖",
+      position: formPosition || "right",
       description: "",
       enabled: true,
       plugins: selectedPluginIds
@@ -255,7 +258,7 @@ Rectangle {
             id: nameField
             Layout.fillWidth: true
             text: root.formName
-            placeholderText: "e.g. Media & Entertainment, System Tools"
+            placeholderText: "e.g. Media & Fun, System Tools"
             foreground: root.foreground
             accent: root.accent
             onTextChanged: root.formName = text
@@ -324,7 +327,142 @@ Rectangle {
           }
         }
 
-        // Field 3: Current Added Plugins List with Reordering
+        // Field 3: Group Top Bar Positioning (Left, Center, Right)
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+
+          Text {
+            text: "TOP BAR POSITION"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: Qt.darker(root.foreground, 1.4)
+          }
+
+          // Horizontal Segmented Toggle for Positioning
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(38)
+            radius: Style.cornerRadius
+            color: Util.alpha(root.foreground, 0.05)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: Style.space(3)
+              spacing: Style.space(3)
+
+              // Position: Left
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.formPosition === "left" ? root.accent : (posLeftHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: "󰁍"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.formPosition === "left" ? "#12131a" : root.foreground
+                  }
+                  Text {
+                    text: "Left"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.formPosition === "left"
+                    color: root.formPosition === "left" ? "#12131a" : root.foreground
+                  }
+                }
+
+                MouseArea {
+                  id: posLeftHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.formPosition = "left"
+                }
+              }
+
+              // Position: Center
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.formPosition === "center" ? root.accent : (posCenterHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: "󰅀"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.formPosition === "center" ? "#12131a" : root.foreground
+                  }
+                  Text {
+                    text: "Center"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.formPosition === "center"
+                    color: root.formPosition === "center" ? "#12131a" : root.foreground
+                  }
+                }
+
+                MouseArea {
+                  id: posCenterHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.formPosition = "center"
+                }
+              }
+
+              // Position: Right
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.formPosition === "right" ? root.accent : (posRightHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: "󰁔"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.formPosition === "right" ? "#12131a" : root.foreground
+                  }
+                  Text {
+                    text: "Right"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.formPosition === "right"
+                    color: root.formPosition === "right" ? "#12131a" : root.foreground
+                  }
+                }
+
+                MouseArea {
+                  id: posRightHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.formPosition = "right"
+                }
+              }
+            }
+          }
+        }
+
+        // Field 4: Current Added Plugins List with Reordering
         ColumnLayout {
           Layout.fillWidth: true
           spacing: Style.space(6)

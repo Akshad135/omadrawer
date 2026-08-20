@@ -15,9 +15,34 @@ BarWidget {
 
   // ------------------------------------------------------------- State & Settings
   property var groupsList: []
+  property var pluginOrigins: ({})
   property var expandedGroups: ({})
   property string slideDirection: "right" // "right" | "left"
   property bool popupOpen: false
+
+  readonly property string currentRegion: {
+    var p = root.parent
+    while (p) {
+      if (p.region !== undefined && typeof p.region === "string" && p.region.length > 0) {
+        return p.region
+      }
+      p = p.parent
+    }
+    return "right"
+  }
+
+  readonly property var visibleGroups: {
+    var list = []
+    if (!root.groupsList) return list
+    for (var i = 0; i < root.groupsList.length; i++) {
+      var g = root.groupsList[i]
+      var pos = g && g.position ? g.position : "right"
+      if (pos === root.currentRegion) {
+        list.push(g)
+      }
+    }
+    return list
+  }
 
   function open() { popupOpen = true }
   function close() { popupOpen = false }
@@ -45,7 +70,7 @@ BarWidget {
     if (key === "slideDirection") {
       root.slideDirection = val
     }
-    var serialized = Logic.serializeData(root.groupsList, { slideDirection: root.slideDirection })
+    var serialized = Logic.serializeData(root.groupsList, { slideDirection: root.slideDirection }, root.pluginOrigins)
     groupsFile.setText(serialized)
   }
 
@@ -80,14 +105,25 @@ BarWidget {
 
     // 1. Build map of all plugin IDs that are currently in at least one drawer group
     var groupedMap = {}
+    var requiredSections = { "right": true } // "right" is the default manager home
+
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i]
-      if (g && g.plugins && Array.isArray(g.plugins)) {
-        for (var j = 0; j < g.plugins.length; j++) {
-          var pid = String(g.plugins[j]).trim()
-          if (pid) groupedMap[pid] = true
+      if (g) {
+        var gPos = g.position || "right"
+        requiredSections[gPos] = true
+        if (g.plugins && Array.isArray(g.plugins)) {
+          for (var j = 0; j < g.plugins.length; j++) {
+            var pid = String(g.plugins[j]).trim()
+            if (pid) groupedMap[pid] = true
+          }
         }
       }
+    }
+
+    var originsCopy = {}
+    for (var ok in root.pluginOrigins) {
+      originsCopy[ok] = root.pluginOrigins[ok]
     }
 
     bar.shell.mutateShellConfig(function(config) {
@@ -95,7 +131,6 @@ BarWidget {
       if (!Array.isArray(config.plugins)) config.plugins = []
       if (!config.bar || !config.bar.layout) return
 
-      // Disabled plugins list
       var disabledMap = {}
       if (Array.isArray(config.disabledPlugins)) {
         for (var d = 0; d < config.disabledPlugins.length; d++) {
@@ -103,7 +138,7 @@ BarWidget {
         }
       }
 
-      // 2. Ensure all grouped plugins are present in config.plugins
+      // 2. Ensure all grouped plugins are present in config.plugins so BarWidgetRegistry keeps them active
       var existingPluginIds = {}
       for (var p = 0; p < config.plugins.length; p++) {
         var pEntry = config.plugins[p]
@@ -123,22 +158,29 @@ BarWidget {
         existingPluginIds["akshad.omadrawer"] = true
       }
 
-      // 3. Find which plugins are currently placed in any bar section (left, center, right)
+      // 3. Scan all sections (left, center, right) to capture origins before removing grouped plugins
       var sections = ["left", "center", "right"]
       var placedOnBar = {}
+
       for (var s = 0; s < sections.length; s++) {
-        var sec = sections[s]
-        var list = config.bar.layout[sec]
+        var secName = sections[s]
+        var list = config.bar.layout[secName]
         if (Array.isArray(list)) {
           for (var k = 0; k < list.length; k++) {
             var item = list[k]
             var itemId = typeof item === "string" ? item : (item && item.id ? item.id : "")
-            if (itemId) placedOnBar[itemId] = true
+            if (itemId && itemId !== "akshad.omadrawer") {
+              placedOnBar[itemId] = secName
+              // If this item is now grouped, record its origin section!
+              if (groupedMap[itemId]) {
+                originsCopy[itemId] = secName
+              }
+            }
           }
         }
       }
 
-      // 4. Remove all grouped plugins from bar.layout so they only live inside their drawer
+      // 4. Remove all grouped plugins from bar.layout sections
       for (var s2 = 0; s2 < sections.length; s2++) {
         var sec2 = sections[s2]
         var list2 = config.bar.layout[sec2]
@@ -155,41 +197,56 @@ BarWidget {
         }
       }
 
-      // 5. Restore un-grouped plugins back to bar.layout.right
-      if (!Array.isArray(config.bar.layout.right)) config.bar.layout.right = []
-
-      // Locate insertion index near akshad.omadrawer
-      var drawerIndex = -1
-      for (var r = 0; r < config.bar.layout.right.length; r++) {
-        var rEntry = config.bar.layout.right[r]
-        var rId = typeof rEntry === "string" ? rEntry : (rEntry && rEntry.id ? rEntry.id : "")
-        if (rId === "akshad.omadrawer") {
-          drawerIndex = r
-          break
+      // 5. Ensure akshad.omadrawer is present in all sections that require it
+      for (var s3 = 0; s3 < sections.length; s3++) {
+        var sec3 = sections[s3]
+        if (!Array.isArray(config.bar.layout[sec3])) config.bar.layout[sec3] = []
+        var hasDrawer = false
+        for (var dIdx = 0; dIdx < config.bar.layout[sec3].length; dIdx++) {
+          var dEntry = config.bar.layout[sec3][dIdx]
+          var dId = typeof dEntry === "string" ? dEntry : (dEntry && dEntry.id ? dEntry.id : "")
+          if (dId === "akshad.omadrawer") {
+            hasDrawer = true
+            break
+          }
+        }
+        if (requiredSections[sec3] && !hasDrawer) {
+          config.bar.layout[sec3].push({ id: "akshad.omadrawer" })
+        } else if (!requiredSections[sec3] && hasDrawer && sec3 !== "right") {
+          config.bar.layout[sec3] = config.bar.layout[sec3].filter(function(e) {
+            var eid = typeof e === "string" ? e : (e && e.id ? e.id : "")
+            return eid !== "akshad.omadrawer"
+          })
         }
       }
 
-      var insertPos = drawerIndex !== -1 ? drawerIndex + 1 : config.bar.layout.right.length
-
-      // Check all plugins in config.plugins
+      // 6. Restore un-grouped plugins back to their ORIGINAL origin sections
       for (var cp = 0; cp < config.plugins.length; cp++) {
         var cEntry = config.plugins[cp]
         var cId = typeof cEntry === "string" ? cEntry : (cEntry && cEntry.id ? cEntry.id : "")
         if (!cId || cId === "akshad.omadrawer" || groupedMap[cId] || disabledMap[cId]) continue
 
         if (!placedOnBar[cId]) {
+          var destSec = originsCopy[cId] || "right"
+          if (!Array.isArray(config.bar.layout[destSec])) config.bar.layout[destSec] = []
+          
           var newEntry = typeof cEntry === "object" ? JSON.parse(JSON.stringify(cEntry)) : { id: cId }
-          config.bar.layout.right.splice(insertPos, 0, newEntry)
-          placedOnBar[cId] = true
-          insertPos++
+          config.bar.layout[destSec].push(newEntry)
+          placedOnBar[cId] = destSec
+          delete originsCopy[cId]
         }
       }
     })
+
+    root.pluginOrigins = originsCopy
+    var serialized = Logic.serializeData(groups, { slideDirection: root.slideDirection }, originsCopy)
+    groupsFile.setText(serialized)
   }
 
   function loadGroups(raw) {
     var data = Logic.parseData(raw)
     root.groupsList = data.groups
+    root.pluginOrigins = data.pluginOrigins || {}
     if (data.settings && data.settings.slideDirection) {
       root.slideDirection = data.settings.slideDirection
     }
@@ -202,7 +259,7 @@ BarWidget {
 
   function saveAllGroups(list) {
     root.groupsList = list
-    var serialized = Logic.serializeData(list, { slideDirection: root.slideDirection })
+    var serialized = Logic.serializeData(list, { slideDirection: root.slideDirection }, root.pluginOrigins)
     groupsFile.setText(serialized)
     Qt.callLater(function() { root.syncShellLayout(list) })
   }
@@ -250,9 +307,10 @@ BarWidget {
     spacing: 0
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
-    // 1. OmaDrawer Manager Icon Button
+    // 1. OmaDrawer Manager Icon Button (Hosted on right / primary section)
     WidgetButton {
       id: managerButton
+      visible: root.currentRegion === "right" || root.groupsList.length === 0
       bar: root.bar
       text: "󰏖"
       active: root.popupOpen
@@ -265,9 +323,9 @@ BarWidget {
       }
     }
 
-    // 2. Active Drawer Groups on Top Bar
+    // 2. Active Drawer Groups in this Specific Bar Section
     Repeater {
-      model: root.groupsList
+      model: root.visibleGroups
 
       DrawerGroupItem {
         required property var modelData

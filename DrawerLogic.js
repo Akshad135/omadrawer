@@ -30,25 +30,10 @@ function getDefaultGroups() {
       id: "group-media-fun",
       name: "Media & Entertainment",
       icon: "󰵪",
-      description: "Anime, Wordle and games bundle",
+      position: "right",
+      description: "",
       enabled: true,
       plugins: ["akshad135.anisync", "akshad135.wordle", "jankeesvw.omasweeper"]
-    },
-    {
-      id: "group-system-tools",
-      name: "System & Hardware",
-      icon: "󰍛",
-      description: "Activity, audio controls and mesh",
-      enabled: true,
-      plugins: ["ilyazar.btop", "ssupt.audio-control", "omarchy.tailscale"]
-    },
-    {
-      id: "group-connectivity",
-      name: "Network & Devices",
-      icon: "󰤨",
-      description: "Wi-Fi, Bluetooth and displays",
-      enabled: true,
-      plugins: ["omarchy.network", "omarchy.bluetooth", "omarchy.monitor"]
     }
   ];
 }
@@ -79,6 +64,7 @@ function parseData(rawText) {
     settings: {
       slideDirection: "right"
     },
+    pluginOrigins: {},
     groups: getDefaultGroups()
   };
   if (!rawText || rawText.trim().length === 0) {
@@ -89,13 +75,16 @@ function parseData(rawText) {
     if (Array.isArray(data)) {
       return {
         settings: { slideDirection: "right" },
+        pluginOrigins: {},
         groups: data
       };
     }
     if (data && typeof data === "object") {
+      var groups = Array.isArray(data.groups) ? data.groups : getDefaultGroups();
       return {
         settings: data.settings || { slideDirection: "right" },
-        groups: Array.isArray(data.groups) ? data.groups : getDefaultGroups()
+        pluginOrigins: data.pluginOrigins || {},
+        groups: groups
       };
     }
   } catch (e) {
@@ -104,11 +93,12 @@ function parseData(rawText) {
   return defaults;
 }
 
-function serializeData(groupsList, settings) {
+function serializeData(groupsList, settings, pluginOrigins) {
   return JSON.stringify({
     version: 1,
     updatedAt: new Date().toISOString(),
     settings: settings || { slideDirection: "right" },
+    pluginOrigins: pluginOrigins || {},
     groups: groupsList || []
   }, null, 2) + "\n";
 }
