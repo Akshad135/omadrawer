@@ -154,6 +154,19 @@ BarWidget {
     id: ensureDirProc
     command: ["mkdir", "-p", root.stateDir]
     onExited: function(code) {
+      bootstrapProc.running = true
+    }
+  }
+
+  // FileView.onLoaded never fires for a missing file (quickshell only reports
+  // successful loads), so a fresh install would stay empty forever. Probe for
+  // the state file after the directory exists and seed the first-run welcome
+  // group when it is absent.
+  Process {
+    id: bootstrapProc
+    command: ["test", "-f", root.groupsFilePath]
+    onExited: function(code) {
+      if (code !== 0) root.loadGroups("")
       groupsFile.reload()
     }
   }
@@ -446,6 +459,9 @@ BarWidget {
     if (foundIndex !== -1) {
       current[foundIndex] = groupData
     } else {
+      // Creating a new group: the transient first-run welcome group has
+      // served its purpose and leaves the bar.
+      current = current.filter(function(g) { return !Logic.isWelcomeGroup(g) })
       current.push(groupData)
     }
     root.saveAllGroups(current)

@@ -78,19 +78,28 @@ var PRESET_ICONS = [
   "󰥔", "󰖐", "󰃭", "󰈙", "󰏝", "󰃟", "󰄬", "󰆍", "󰅨", "󰘐"
 ];
 
+// First-run state: a single welcome group with no plugins. It is the
+// discoverable entry point on the bar (no manager icon exists), clicking it
+// opens the manager, and it is removed automatically when the user creates
+// their first real group.
 function getDefaultGroups() {
   return [
     {
-      id: "group-media-fun",
-      name: "Media & Entertainment",
-      icon: "󰵪",
+      id: "group-welcome",
+      name: "Welcome",
+      icon: "󰏖",
       position: "right",
-      direction: "right",
-      description: "",
+      direction: "left",
+      description: "First-run guide — click to open the manager.",
       enabled: true,
-      plugins: ["akshad135.anisync", "akshad135.wordle", "jankeesvw.omasweeper"]
+      welcome: true,
+      plugins: []
     }
   ];
+}
+
+function isWelcomeGroup(group) {
+  return !!group && group.welcome === true;
 }
 
 function findPluginMeta(pluginId, pluginRegistry) {

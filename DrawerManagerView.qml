@@ -14,6 +14,24 @@ Item {
   property var editingGroup: null
   property var deletingGroup: null
 
+  // Groups excluding the transient first-run welcome group.
+  readonly property var realGroups: {
+    var out = []
+    var list = host ? host.groupsList : []
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && !Logic.isWelcomeGroup(list[i])) out.push(list[i])
+    }
+    return out
+  }
+  readonly property bool welcomeGroupPresent: {
+    var list = host ? host.groupsList : []
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && Logic.isWelcomeGroup(list[i])) return true
+    }
+    return false
+  }
+  readonly property bool showWelcomeCard: root.welcomeGroupPresent && root.realGroups.length === 0
+
   readonly property color colForeground: Color.foreground
   readonly property color colAccent: Color.accent
   readonly property color colDim: Qt.darker(Color.foreground, 1.4)
@@ -79,7 +97,9 @@ Item {
           Text {
             text: root.currentView === "settings"
               ? "Preferences"
-              : (root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured")
+              : (root.showWelcomeCard
+                ? "Welcome — get started below"
+                : (root.realGroups.length + " " + (root.realGroups.length === 1 ? "group" : "groups") + " configured"))
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colDim
@@ -192,9 +212,98 @@ Item {
             width: parent.width
             spacing: Style.space(8)
 
+            // First-run welcome card with instructions
+            Rectangle {
+              visible: root.showWelcomeCard
+              Layout.fillWidth: true
+              implicitHeight: Style.space(240)
+              radius: Style.cornerRadius
+              color: Util.alpha(colAccent, 0.07)
+              border.color: Util.alpha(colAccent, 0.35)
+              border.width: 1
+
+              ColumnLayout {
+                anchors.centerIn: parent
+                width: parent.width - Style.space(48)
+                spacing: Style.space(8)
+
+                Rectangle {
+                  Layout.alignment: Qt.AlignHCenter
+                  width: Style.space(42)
+                  height: Style.space(42)
+                  radius: Style.cornerRadius
+                  color: Util.alpha(colAccent, 0.15)
+                  border.color: Util.alpha(colAccent, 0.4)
+                  border.width: 1
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "󰏖"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.display
+                    color: colAccent
+                  }
+                }
+
+                Text {
+                  Layout.alignment: Qt.AlignHCenter
+                  text: "Welcome to OmaDrawer"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.subtitle
+                  font.bold: true
+                  color: colForeground
+                }
+
+                Text {
+                  Layout.alignment: Qt.AlignHCenter
+                  Layout.fillWidth: true
+                  horizontalAlignment: Text.AlignHCenter
+                  wrapMode: Text.WordWrap
+                  lineHeight: 1.3
+                  text: "Group your top bar widgets into slide-out drawers.\n"
+                    + "• Click a group on the bar to open its drawer\n"
+                    + "• Right-click any group to open this manager\n"
+                    + "• Drag groups to move them between bar sections"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  color: colDim
+                }
+
+                Rectangle {
+                  Layout.alignment: Qt.AlignHCenter
+                  Layout.preferredWidth: Style.space(170)
+                  Layout.preferredHeight: Style.space(34)
+                  radius: Style.cornerRadius
+                  color: getStartedHover.containsMouse ? colAccent : Util.alpha(colAccent, 0.85)
+                  border.color: colAccent
+                  border.width: 1
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: "Create your first group"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                    color: "#12131a"
+                  }
+
+                  MouseArea {
+                    id: getStartedHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      root.editingGroup = null
+                      root.currentView = "editor"
+                    }
+                  }
+                }
+              }
+            }
+
             // Empty state if 0 groups
             Rectangle {
-              visible: root.groupsList.length === 0
+              visible: !root.showWelcomeCard && root.realGroups.length === 0
               Layout.fillWidth: true
               implicitHeight: Style.space(160)
               radius: Style.cornerRadius
@@ -245,7 +354,7 @@ Item {
 
             // Groups repeater
             Repeater {
-              model: root.groupsList
+              model: root.realGroups
 
               delegate: DrawerCard {
                 host: root.host

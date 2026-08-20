@@ -14,7 +14,7 @@ const Logic = new Function(src + `
     KNOWN_PLUGINS, EXCLUDED_PLUGIN_IDS, PRESET_ICONS,
     isExcludedPlugin, findPluginMeta, generateGroupId,
     parseData, serializeData, getDefaultGroups,
-    drawerEntryKey, groupEntryId,
+    isWelcomeGroup, drawerEntryKey, groupEntryId,
     reconcileGroupsWithLayout, deduplicateBarLayout, groupsNeedLayoutSync
   }
 `).call(sandbox)
@@ -79,6 +79,10 @@ check("Custom plugin resolves manifest SVG and displayName", {
 })
 
 console.log("\n== parseData & serializeData ==")
+const defaultGroups = Logic.getDefaultGroups()
+check("Default state is the welcome group only", { count: defaultGroups.length, welcome: defaultGroups[0].welcome, plugins: defaultGroups[0].plugins.length }, { count: 1, welcome: true, plugins: 0 })
+check("Welcome group is recognized", Logic.isWelcomeGroup(defaultGroups[0]), true)
+check("Real groups are not welcome groups", Logic.isWelcomeGroup({ id: "g1", plugins: [] }), false)
 const testGroups = [
   {
     id: "group-test-1",

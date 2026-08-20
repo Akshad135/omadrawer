@@ -48,10 +48,15 @@ Item {
       active: root.expanded
       useActiveColor: true
       activeColor: root.colAccent
-      tooltipText: (root.groupData ? root.groupData.name : "Drawer") + (root.expanded ? " (Click to close drawer)" : " (Click to open drawer)")
+      tooltipText: {
+        if (root.pluginsList.length === 0) {
+          return (root.groupData ? root.groupData.name : "Drawer") + " (Click to open manager)"
+        }
+        return (root.groupData ? root.groupData.name : "Drawer") + (root.expanded ? " (Click to close drawer)" : " (Click to open drawer)")
+      }
 
       onPressed: function(buttonCode) {
-        if (buttonCode === Qt.RightButton) {
+        if (buttonCode === Qt.RightButton || root.pluginsList.length === 0) {
           root.openManager()
         } else {
           root.toggleExpanded()
