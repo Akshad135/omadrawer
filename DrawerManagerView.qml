@@ -177,13 +177,6 @@ Item {
           }
 
           Item { Layout.fillWidth: true }
-
-          Text {
-            text: "Slide: " + (root.activeSlideDirection === "left" ? "Left 󰁍" : "Right 󰁔")
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            color: colAccent
-          }
         }
 
         // Scrollable Groups List

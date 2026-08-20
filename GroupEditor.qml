@@ -20,6 +20,7 @@ Rectangle {
   property string formName: ""
   property string formIcon: "󰏖"
   property string formPosition: host ? host.currentRegion : "right"
+  property string formDirection: "right" // "right" | "left"
   property var selectedPluginIds: []
 
   readonly property var otherGroupsPluginMap: {
@@ -119,12 +120,14 @@ Rectangle {
       formName = group.name || ""
       formIcon = group.icon || "󰏖"
       formPosition = group.position || (host ? host.currentRegion : "right")
+      formDirection = group.direction || "right"
       selectedPluginIds = group.plugins ? group.plugins.slice() : []
     } else {
       formId = ""
       formName = ""
       formIcon = "󰏖"
       formPosition = host ? host.currentRegion : "right"
+      formDirection = "right"
       selectedPluginIds = []
     }
     viewMode = "editor"
@@ -173,6 +176,7 @@ Rectangle {
       name: formName.trim(),
       icon: formIcon.trim() || "󰏖",
       position: formPosition || "right",
+      direction: formDirection || "right",
       description: "",
       enabled: true,
       plugins: selectedPluginIds
@@ -462,7 +466,107 @@ Rectangle {
           }
         }
 
-        // Field 4: Current Added Plugins List with Reordering
+        // Field 4: Group Slide Direction (Left vs Right)
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+
+          Text {
+            text: "SLIDE EXPANSION DIRECTION"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: Qt.darker(root.foreground, 1.4)
+          }
+
+          // Horizontal Segmented Toggle for Slide Direction
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(38)
+            radius: Style.cornerRadius
+            color: Util.alpha(root.foreground, 0.05)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: Style.space(3)
+              spacing: Style.space(3)
+
+              // Slide Left
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.formDirection === "left" ? root.accent : (dirLeftHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: "󰁍"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.formDirection === "left" ? "#12131a" : root.foreground
+                  }
+                  Text {
+                    text: "Slide Left"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.formDirection === "left"
+                    color: root.formDirection === "left" ? "#12131a" : root.foreground
+                  }
+                }
+
+                MouseArea {
+                  id: dirLeftHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.formDirection = "left"
+                }
+              }
+
+              // Slide Right
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.formDirection === "right" ? root.accent : (dirRightHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(4)
+                  Text {
+                    text: "󰁔"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.formDirection === "right" ? "#12131a" : root.foreground
+                  }
+                  Text {
+                    text: "Slide Right"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.formDirection === "right"
+                    color: root.formDirection === "right" ? "#12131a" : root.foreground
+                  }
+                }
+
+                MouseArea {
+                  id: dirRightHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.formDirection = "right"
+                }
+              }
+            }
+          }
+        }
+
+        // Field 5: Current Added Plugins List with Reordering
         ColumnLayout {
           Layout.fillWidth: true
           spacing: Style.space(6)

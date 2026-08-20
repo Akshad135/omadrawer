@@ -17,7 +17,8 @@ Item {
 
   readonly property color colAccent: Color.accent
   readonly property var pluginsList: (groupData && groupData.plugins) ? groupData.plugins : []
-  readonly property bool isSlideLeft: slideDirection === "left"
+  readonly property string effectiveDirection: (groupData && groupData.direction) ? groupData.direction : (slideDirection || "right")
+  readonly property bool isSlideLeft: effectiveDirection === "left"
 
   implicitWidth: groupButton.implicitWidth + sliderArea.implicitWidth
   implicitHeight: Math.max(groupButton.implicitHeight, sliderArea.implicitHeight)

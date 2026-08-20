@@ -122,6 +122,25 @@ Rectangle {
             color: root.accent
           }
         }
+
+        // Direction pill
+        Rectangle {
+          height: Style.space(16)
+          width: dirText.implicitWidth + Style.space(10)
+          radius: Style.cornerRadius
+          color: Util.alpha(root.foreground, 0.08)
+          border.color: Util.alpha(root.foreground, 0.2)
+          border.width: 1
+
+          Text {
+            id: dirText
+            anchors.centerIn: parent
+            text: (root.groupData && root.groupData.direction === "left") ? "Slide Left 󰁍" : "Slide Right 󰁔"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Qt.darker(root.foreground, 1.25)
+          }
+        }
       }
 
       // Spacer pushing Edit & Delete to the right side
