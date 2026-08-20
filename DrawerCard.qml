@@ -70,20 +70,21 @@ Rectangle {
         }
       }
 
-      // Group Title & Items count
+      // Group Title (elides into available space so long names can never
+      // push the action buttons out of the card)
+      Text {
+        text: root.groupData ? (root.groupData.name || "Untitled Group") : "Untitled Group"
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.subtitle
+        font.bold: true
+        color: root.foreground
+        elide: Text.ElideRight
+        Layout.fillWidth: true
+      }
+
+      // Pills: items count, position, slide direction
       RowLayout {
         spacing: Style.space(6)
-
-        Text {
-          text: root.groupData ? (root.groupData.name || "Untitled Group") : "Untitled Group"
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.subtitle
-          font.bold: true
-          color: root.foreground
-          elide: Text.ElideRight
-        }
-
-        // Plugins count pill
         Rectangle {
           height: Style.space(16)
           width: countText.implicitWidth + Style.space(10)
@@ -143,11 +144,6 @@ Rectangle {
             color: Qt.darker(root.foreground, 1.25)
           }
         }
-      }
-
-      // Spacer pushing Edit & Delete to the right side
-      Item {
-        Layout.fillWidth: true
       }
 
       // Action Buttons: Edit & Delete (Right-aligned)

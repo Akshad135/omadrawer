@@ -335,6 +335,7 @@ Rectangle {
                   Layout.fillWidth: true
                   text: root.formName
                   placeholderText: "e.g. Games, Media, Tools"
+                  maximumLength: 32
                   foreground: root.foreground
                   accent: root.accent
                   onTextChanged: root.formName = text
@@ -1073,6 +1074,8 @@ Rectangle {
                   font.pixelSize: Style.font.body
                   font.bold: isSelected
                   color: root.foreground
+                  elide: Text.ElideRight
+                  Layout.fillWidth: true
                 }
 
                 Text {
