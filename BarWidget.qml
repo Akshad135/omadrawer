@@ -17,7 +17,8 @@ BarWidget {
   property var groupsList: []
   property var pluginOrigins: ({})
   property var expandedGroups: ({})
-  property string slideDirection: "right" // "right" | "left"
+  property string displayMode: "icon" // "icon" | "name" | "both"
+  property string slideDirection: "right" // fallback
   property bool popupOpen: false
 
   readonly property string currentRegion: {
@@ -67,10 +68,15 @@ BarWidget {
   }
 
   function updateSetting(key, val) {
-    if (key === "slideDirection") {
+    if (key === "displayMode") {
+      root.displayMode = val
+    } else if (key === "slideDirection") {
       root.slideDirection = val
     }
-    var serialized = Logic.serializeData(root.groupsList, { slideDirection: root.slideDirection }, root.pluginOrigins)
+    var serialized = Logic.serializeData(root.groupsList, { 
+      displayMode: root.displayMode, 
+      slideDirection: root.slideDirection 
+    }, root.pluginOrigins)
     groupsFile.setText(serialized)
   }
 
@@ -171,7 +177,6 @@ BarWidget {
             var itemId = typeof item === "string" ? item : (item && item.id ? item.id : "")
             if (itemId && itemId !== "akshad.omadrawer") {
               placedOnBar[itemId] = secName
-              // If this item is now grouped, record its origin section!
               if (groupedMap[itemId]) {
                 originsCopy[itemId] = secName
               }
@@ -239,7 +244,10 @@ BarWidget {
     })
 
     root.pluginOrigins = originsCopy
-    var serialized = Logic.serializeData(groups, { slideDirection: root.slideDirection }, originsCopy)
+    var serialized = Logic.serializeData(groups, { 
+      displayMode: root.displayMode, 
+      slideDirection: root.slideDirection 
+    }, originsCopy)
     groupsFile.setText(serialized)
   }
 
@@ -247,8 +255,9 @@ BarWidget {
     var data = Logic.parseData(raw)
     root.groupsList = data.groups
     root.pluginOrigins = data.pluginOrigins || {}
-    if (data.settings && data.settings.slideDirection) {
-      root.slideDirection = data.settings.slideDirection
+    if (data.settings) {
+      if (data.settings.displayMode) root.displayMode = data.settings.displayMode
+      if (data.settings.slideDirection) root.slideDirection = data.settings.slideDirection
     }
     if (!raw || raw.trim().length === 0) {
       root.saveAllGroups(data.groups)
@@ -259,7 +268,10 @@ BarWidget {
 
   function saveAllGroups(list) {
     root.groupsList = list
-    var serialized = Logic.serializeData(list, { slideDirection: root.slideDirection }, root.pluginOrigins)
+    var serialized = Logic.serializeData(list, { 
+      displayMode: root.displayMode, 
+      slideDirection: root.slideDirection 
+    }, root.pluginOrigins)
     groupsFile.setText(serialized)
     Qt.callLater(function() { root.syncShellLayout(list) })
   }
@@ -331,7 +343,8 @@ BarWidget {
         required property var modelData
         groupData: modelData
         bar: root.bar
-        slideDirection: root.slideDirection
+        displayMode: root.displayMode
+        slideDirection: modelData.direction || "right"
         expanded: root.isGroupExpanded(modelData.id)
         onToggleExpanded: root.toggleGroupExpanded(modelData.id)
         onOpenManager: root.open()

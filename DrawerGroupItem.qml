@@ -10,6 +10,7 @@ Item {
   property var groupData: null
   property var bar: null
   property bool expanded: false
+  property string displayMode: "icon" // "icon" | "name" | "both"
   property string slideDirection: "right" // "right" | "left"
 
   signal toggleExpanded()
@@ -19,6 +20,14 @@ Item {
   readonly property var pluginsList: (groupData && groupData.plugins) ? groupData.plugins : []
   readonly property string effectiveDirection: (groupData && groupData.direction) ? groupData.direction : (slideDirection || "right")
   readonly property bool isSlideLeft: effectiveDirection === "left"
+
+  readonly property string displayLabel: {
+    var icon = (groupData && groupData.icon) ? groupData.icon : "󰏖"
+    var name = (groupData && groupData.name) ? groupData.name : "Drawer"
+    if (root.displayMode === "name") return name
+    if (root.displayMode === "both") return icon + " " + name
+    return icon
+  }
 
   implicitWidth: groupButton.implicitWidth + sliderArea.implicitWidth
   implicitHeight: Math.max(groupButton.implicitHeight, sliderArea.implicitHeight)
@@ -35,7 +44,7 @@ Item {
     WidgetButton {
       id: groupButton
       bar: root.bar
-      text: root.groupData ? (root.groupData.icon || "󰏖") : "󰏖"
+      text: root.displayLabel
       active: root.expanded
       useActiveColor: true
       activeColor: root.colAccent
@@ -61,7 +70,7 @@ Item {
 
       Behavior on implicitWidth {
         NumberAnimation {
-          duration: 200
+          duration: 220
           easing.type: Easing.OutCubic
         }
       }
@@ -70,14 +79,13 @@ Item {
         id: pluginsBlock
         spacing: 0
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-        layoutDirection: root.isSlideLeft ? Qt.RightToLeft : Qt.LeftToRight
 
         Repeater {
           model: root.pluginsList
 
           DrawerPluginSlot {
             required property var modelData
-            pluginId: String(modelData)
+            pluginId: modelData
             bar: root.bar
           }
         }

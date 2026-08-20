@@ -10,7 +10,7 @@ Item {
 
   property var host: null
   property var groupsList: host ? host.groupsList : []
-  property string currentView: "list" // "list" | "editor" | "delete_confirm"
+  property string currentView: "list" // "list" | "editor" | "settings" | "delete_confirm"
   property var editingGroup: null
   property var deletingGroup: null
 
@@ -20,6 +20,7 @@ Item {
   readonly property color colBorder: Style.normalBorderFor(Color.foreground, Color.accent)
   readonly property color colCardBg: Style.normalFillFor(Color.foreground, Color.accent)
   readonly property string fontFamily: host && host.bar ? host.bar.fontFamily : Style.font.family
+  readonly property string activeDisplayMode: host ? (host.displayMode || "icon") : "icon"
 
   implicitWidth: Style.space(420)
   implicitHeight: Style.space(510)
@@ -76,7 +77,9 @@ Item {
           }
 
           Text {
-            text: root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured"
+            text: root.currentView === "settings"
+              ? "Preferences"
+              : (root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colDim
@@ -84,6 +87,40 @@ Item {
         }
 
         Item { Layout.fillWidth: true }
+
+        // Settings Button (Top-Right)
+        Rectangle {
+          width: Style.space(28)
+          height: Style.space(28)
+          radius: Style.cornerRadius
+          color: root.currentView === "settings"
+            ? Util.alpha(colAccent, 0.35)
+            : (settingsHover.containsMouse ? Util.alpha(colForeground, 0.15) : Util.alpha(colForeground, 0.06))
+          border.color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colBorder : "transparent")
+          border.width: 1
+
+          Text {
+            anchors.centerIn: parent
+            text: "󰒓"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+            color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colForeground : colDim)
+          }
+
+          MouseArea {
+            id: settingsHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              if (root.currentView === "settings") {
+                root.currentView = "list"
+              } else {
+                root.currentView = "settings"
+              }
+            }
+          }
+        }
 
         // Close Button
         Rectangle {
@@ -274,7 +311,253 @@ Item {
         }
       }
 
-      // 2. ADD / EDIT GROUP EDITOR VIEW
+      // 2. SETTINGS VIEW (Display Mode Toggle)
+      ColumnLayout {
+        anchors.fill: parent
+        visible: root.currentView === "settings"
+        spacing: Style.space(12)
+
+        // Settings Header: [‹ Back] [Title]
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(8)
+
+          Rectangle {
+            width: Style.space(28)
+            height: Style.space(28)
+            radius: Style.cornerRadius
+            color: setBackHover.containsMouse ? Util.alpha(root.colForeground, 0.15) : Util.alpha(root.colForeground, 0.06)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "‹"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.heading
+              color: root.colForeground
+            }
+
+            MouseArea {
+              id: setBackHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.currentView = "list"
+            }
+          }
+
+          Text {
+            text: "Drawer Preferences"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.subtitle
+            font.bold: true
+            color: root.colForeground
+            Layout.fillWidth: true
+          }
+        }
+
+        // Section: Top Bar Display Mode Toggle
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(8)
+
+          Text {
+            text: "TOP BAR GROUP DISPLAY"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            font.bold: true
+            color: Qt.darker(root.colForeground, 1.4)
+          }
+
+          // 3-Way Segmented Slider / Toggle Control
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(40)
+            radius: Style.cornerRadius
+            color: Util.alpha(root.colForeground, 0.05)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: Style.space(3)
+              spacing: Style.space(3)
+
+              // Option 1: Icon Only
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.activeDisplayMode === "icon" 
+                  ? root.colAccent 
+                  : (iconOnlyH.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(5)
+
+                  Text {
+                    text: "󰏖"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.activeDisplayMode === "icon" ? "#12131a" : root.colForeground
+                  }
+
+                  Text {
+                    text: "Icon"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.activeDisplayMode === "icon"
+                    color: root.activeDisplayMode === "icon" ? "#12131a" : root.colForeground
+                  }
+                }
+
+                MouseArea {
+                  id: iconOnlyH
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (host && host.updateSetting) host.updateSetting("displayMode", "icon")
+                  }
+                }
+              }
+
+              // Option 2: Name Only
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.activeDisplayMode === "name" 
+                  ? root.colAccent 
+                  : (nameOnlyH.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(5)
+
+                  Text {
+                    text: "󰅀"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.activeDisplayMode === "name" ? "#12131a" : root.colForeground
+                  }
+
+                  Text {
+                    text: "Name"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.activeDisplayMode === "name"
+                    color: root.activeDisplayMode === "name" ? "#12131a" : root.colForeground
+                  }
+                }
+
+                MouseArea {
+                  id: nameOnlyH
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (host && host.updateSetting) host.updateSetting("displayMode", "name")
+                  }
+                }
+              }
+
+              // Option 3: Both Icon & Name
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.activeDisplayMode === "both" 
+                  ? root.colAccent 
+                  : (bothH.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(5)
+
+                  Text {
+                    text: "󰚌"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.activeDisplayMode === "both" ? "#12131a" : root.colForeground
+                  }
+
+                  Text {
+                    text: "Both"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.activeDisplayMode === "both"
+                    color: root.activeDisplayMode === "both" ? "#12131a" : root.colForeground
+                  }
+                }
+
+                MouseArea {
+                  id: bothH
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (host && host.updateSetting) host.updateSetting("displayMode", "both")
+                  }
+                }
+              }
+            }
+          }
+
+          // Descriptive Helper Text
+          Text {
+            text: {
+              if (root.activeDisplayMode === "name") return "Top bar shows only the group name (e.g. Games)."
+              if (root.activeDisplayMode === "both") return "Top bar shows both the icon and group name (e.g. 󰵪 Games)."
+              return "Top bar shows only the group icon (e.g. 󰵪)."
+            }
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            color: Qt.darker(root.colForeground, 1.45)
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+          }
+        }
+
+        Item { Layout.fillHeight: true }
+
+        // Done Button
+        Rectangle {
+          Layout.fillWidth: true
+          Layout.preferredHeight: Style.space(36)
+          radius: Style.cornerRadius
+          color: doneHover.containsMouse ? root.colAccent : Util.alpha(root.colAccent, 0.85)
+          border.color: root.colAccent
+          border.width: 1
+
+          Text {
+            anchors.centerIn: parent
+            text: "Done"
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.body
+            font.bold: true
+            color: "#12131a"
+          }
+
+          MouseArea {
+            id: doneHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.currentView = "list"
+          }
+        }
+      }
+
+      // 3. ADD / EDIT GROUP EDITOR VIEW
       GroupEditor {
         anchors.fill: parent
         visible: root.currentView === "editor"
@@ -294,7 +577,7 @@ Item {
         }
       }
 
-      // 3. DELETE CONFIRMATION VIEW
+      // 4. DELETE CONFIRMATION VIEW
       Rectangle {
         anchors.fill: parent
         visible: root.currentView === "delete_confirm"

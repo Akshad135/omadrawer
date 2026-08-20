@@ -73,6 +73,7 @@ function generateGroupId() {
 function parseData(rawText) {
   var defaults = {
     settings: {
+      displayMode: "icon",
       slideDirection: "right"
     },
     pluginOrigins: {},
@@ -85,15 +86,17 @@ function parseData(rawText) {
     var data = JSON.parse(rawText);
     if (Array.isArray(data)) {
       return {
-        settings: { slideDirection: "right" },
+        settings: { displayMode: "icon", slideDirection: "right" },
         pluginOrigins: {},
         groups: data
       };
     }
     if (data && typeof data === "object") {
       var groups = Array.isArray(data.groups) ? data.groups : getDefaultGroups();
+      var settings = data.settings || {};
+      if (!settings.displayMode) settings.displayMode = "icon";
       return {
-        settings: data.settings || { slideDirection: "right" },
+        settings: settings,
         pluginOrigins: data.pluginOrigins || {},
         groups: groups
       };
