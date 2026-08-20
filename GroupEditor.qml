@@ -59,7 +59,14 @@ Rectangle {
       }
     }
 
-    // 2. Plugins currently present on the top bar layout (left, center, right)
+    // 2. Currently selected plugins in the editor
+    if (Array.isArray(selectedPluginIds)) {
+      for (var k = 0; k < selectedPluginIds.length; k++) {
+        addId(selectedPluginIds[k])
+      }
+    }
+
+    // 3. Plugins currently present on the top bar layout (left, center, right)
     var barLayout = null
     if (host && host.bar) {
       if (host.bar.barConfig && host.bar.barConfig.layout) {
@@ -102,8 +109,8 @@ Rectangle {
     for (var i = 0; i < ids.length; i++) {
       var id = ids[i]
       if (Logic.isExcludedPlugin(id)) continue
-      if (disabledMap[id]) continue
-      if (otherGroupsPluginMap[id]) continue
+      if (disabledMap[id] && root.selectedPluginIds.indexOf(id) === -1) continue
+      if (otherGroupsPluginMap[id] && root.selectedPluginIds.indexOf(id) === -1) continue
 
       var meta = Logic.findPluginMeta(id, root.pluginRegistry)
       result.push(meta)
@@ -871,14 +878,15 @@ Rectangle {
 
       // Save Group Button
       Rectangle {
+        id: saveButton
         readonly property bool canSave: root.formName.trim().length > 0
         Layout.fillWidth: true
         Layout.preferredHeight: Style.space(34)
         radius: Style.cornerRadius
-        color: canSave 
+        color: saveButton.canSave 
           ? (saveHover.containsMouse ? root.accent : Util.alpha(root.accent, 0.85)) 
           : Util.alpha(root.foreground, 0.08)
-        border.color: canSave ? root.accent : "transparent"
+        border.color: saveButton.canSave ? root.accent : "transparent"
         border.width: 1
 
         RowLayout {
@@ -889,7 +897,7 @@ Rectangle {
             text: "󰄬"
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
-            color: canSave ? "#12131a" : Qt.darker(root.foreground, 1.6)
+            color: saveButton.canSave ? "#12131a" : Qt.darker(root.foreground, 1.6)
           }
 
           Text {
@@ -897,16 +905,16 @@ Rectangle {
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
             font.bold: true
-            color: canSave ? "#12131a" : Qt.darker(root.foreground, 1.6)
+            color: saveButton.canSave ? "#12131a" : Qt.darker(root.foreground, 1.6)
           }
         }
 
         MouseArea {
           id: saveHover
           anchors.fill: parent
-          enabled: canSave
+          enabled: saveButton.canSave
           hoverEnabled: true
-          cursorShape: canSave ? Qt.PointingHandCursor : Qt.ArrowCursor
+          cursorShape: saveButton.canSave ? Qt.PointingHandCursor : Qt.ArrowCursor
           onClicked: root.submit()
         }
       }

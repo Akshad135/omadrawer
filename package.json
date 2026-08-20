@@ -1,0 +1,20 @@
+{
+  "name": "omarchy-omadrawer",
+  "version": "1.0.0",
+  "description": "Drawer manager for grouping top bar widgets and plugins into organized collapsible drawers on Omarchy",
+  "main": "DrawerLogic.js",
+  "scripts": {
+    "test": "node --test test/logic.test.mjs"
+  },
+  "keywords": [
+    "omarchy",
+    "quickshell",
+    "bar-widget",
+    "drawer",
+    "grouping",
+    "widgets",
+    "dock"
+  ],
+  "author": "Akshad Agrawal",
+  "license": "MIT"
+}

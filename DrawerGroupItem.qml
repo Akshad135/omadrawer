@@ -29,8 +29,8 @@ Item {
     return icon
   }
 
-  implicitWidth: groupButton.implicitWidth + sliderArea.implicitWidth
-  implicitHeight: Math.max(groupButton.implicitHeight, sliderArea.implicitHeight)
+  implicitWidth: groupRow.implicitWidth
+  implicitHeight: groupRow.implicitHeight
   width: implicitWidth
   height: implicitHeight
 
@@ -79,6 +79,8 @@ Item {
         id: pluginsBlock
         spacing: 0
         anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        anchors.right: root.isSlideLeft ? parent.right : undefined
+        anchors.left: root.isSlideLeft ? undefined : parent.left
 
         Repeater {
           model: root.pluginsList
@@ -87,6 +89,7 @@ Item {
             required property var modelData
             pluginId: modelData
             bar: root.bar
+            expanded: root.expanded
           }
         }
       }
