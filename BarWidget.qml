@@ -45,7 +45,19 @@ BarWidget {
     return list
   }
 
-  readonly property bool isPrimaryInstance: root.currentRegion === "right"
+  readonly property bool isDuplicateSlot: {
+    if (!bar || typeof bar.moduleWidgets !== "function") return false
+    var widgets = bar.moduleWidgets(root.moduleName)
+    if (!Array.isArray(widgets) || widgets.length <= 1) return false
+    for (var i = 0; i < widgets.length; i++) {
+      if (widgets[i] && widgets[i].currentRegion === root.currentRegion) {
+        return widgets[i] !== root
+      }
+    }
+    return false
+  }
+
+  readonly property bool isPrimaryInstance: !isDuplicateSlot && root.currentRegion === "right"
 
   function open() { popupOpen = true }
   function close() { popupOpen = false }
@@ -130,6 +142,17 @@ BarWidget {
         slideDirection: root.slideDirection
       }, root.pluginOrigins)
       groupsFile.setText(serialized)
+    }
+
+    // Auto-clean redundant duplicate slots in any section (e.g. after dragging group to right where manager exists)
+    if (root.isPrimaryInstance && bar && bar.shell && typeof bar.shell.mutateShellConfig === "function") {
+      var dedup = Logic.deduplicateBarLayout(root.barLayout)
+      if (dedup && dedup.changed) {
+        bar.shell.mutateShellConfig(function(config) {
+          if (!config || !config.bar || !config.bar.layout) return
+          config.bar.layout = dedup.layout
+        })
+      }
     }
   }
 
@@ -335,10 +358,11 @@ BarWidget {
   }
 
   // ------------------------------------------------------------- Top Bar UI Layout
-  implicitWidth: barRow.implicitWidth
-  implicitHeight: barRow.implicitHeight
+  implicitWidth: root.isDuplicateSlot ? 0 : barRow.implicitWidth
+  implicitHeight: root.isDuplicateSlot ? 0 : barRow.implicitHeight
   width: implicitWidth
   height: implicitHeight
+  visible: !root.isDuplicateSlot
 
   Row {
     id: barRow

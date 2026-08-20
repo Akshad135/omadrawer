@@ -319,6 +319,41 @@ function reconcileGroupsWithLayout(groups, barLayout) {
   return { changed: changed, groups: updatedGroups };
 }
 
+function deduplicateBarLayout(barLayout) {
+  if (!barLayout || typeof barLayout !== "object") return { changed: false, layout: barLayout };
+  var sections = ["left", "center", "right"];
+  var changed = false;
+  var nextLayout = {};
+
+  for (var s = 0; s < sections.length; s++) {
+    var sec = sections[s];
+    var list = barLayout[sec];
+    if (Array.isArray(list)) {
+      var seenDrawer = false;
+      var filtered = [];
+      for (var i = 0; i < list.length; i++) {
+        var entry = list[i];
+        var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "");
+        if (id === "akshad.omadrawer") {
+          if (!seenDrawer) {
+            seenDrawer = true;
+            filtered.push(entry);
+          } else {
+            changed = true;
+          }
+        } else {
+          filtered.push(entry);
+        }
+      }
+      nextLayout[sec] = filtered;
+    } else {
+      nextLayout[sec] = list;
+    }
+  }
+
+  return { changed: changed, layout: nextLayout };
+}
+
 function serializeData(groupsList, settings, pluginOrigins) {
   return JSON.stringify({
     version: 1,

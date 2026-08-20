@@ -13,7 +13,8 @@ const Logic = new Function(src + `
   return {
     KNOWN_PLUGINS, EXCLUDED_PLUGIN_IDS, PRESET_ICONS,
     isExcludedPlugin, findPluginMeta, generateGroupId,
-    parseData, serializeData, getDefaultGroups, reconcileGroupsWithLayout
+    parseData, serializeData, getDefaultGroups,
+    reconcileGroupsWithLayout, deduplicateBarLayout
   }
 `).call(sandbox)
 
@@ -129,6 +130,24 @@ const sameSideLayout = {
 }
 const rec3 = Logic.reconcileGroupsWithLayout(leftGroups, sameSideLayout)
 check("Same side reorder does not change group position", rec3.changed, false)
+
+console.log("\n== deduplicateBarLayout ==")
+const duplicateLayout = {
+  left: [],
+  center: [],
+  right: ["omarchy.tray", "akshad.omadrawer", "akshad.omadrawer", "omarchy.clock"]
+}
+const dedup = Logic.deduplicateBarLayout(duplicateLayout)
+check("Deduplicates duplicate slots in right section", dedup.changed, true)
+check("Right section length after deduplication is 3", dedup.layout.right.length, 3)
+
+const cleanLayout = {
+  left: ["akshad.omadrawer"],
+  center: [],
+  right: ["akshad.omadrawer"]
+}
+const dedup2 = Logic.deduplicateBarLayout(cleanLayout)
+check("Clean layout reports no duplicate changes", dedup2.changed, false)
 
 console.log("\n-----------------------------------------")
 console.log(`Results: ${passed} passed, ${failed} failed`)
