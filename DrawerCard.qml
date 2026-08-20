@@ -45,7 +45,7 @@ Rectangle {
     anchors.margins: Style.space(10)
     spacing: Style.space(8)
 
-    // Row 1: Icon, Title & Actions
+    // Row 1: Icon, Title & Right-Aligned Actions
     RowLayout {
       Layout.fillWidth: true
       spacing: Style.space(8)
@@ -68,46 +68,45 @@ Rectangle {
         }
       }
 
-      // Group Title & Description
-      ColumnLayout {
-        Layout.fillWidth: true
-        spacing: Style.space(2)
+      // Group Title & Items count
+      RowLayout {
+        spacing: Style.space(6)
 
-        RowLayout {
-          spacing: Style.space(6)
+        Text {
+          text: root.groupData ? (root.groupData.name || "Untitled Group") : "Untitled Group"
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.subtitle
+          font.bold: true
+          color: root.foreground
+          elide: Text.ElideRight
+        }
+
+        // Plugins count pill
+        Rectangle {
+          height: Style.space(16)
+          width: countText.implicitWidth + Style.space(10)
+          radius: Style.cornerRadius
+          color: Util.alpha(root.foreground, 0.08)
+          border.color: Util.alpha(root.foreground, 0.2)
+          border.width: 1
 
           Text {
-            text: root.groupData ? (root.groupData.name || "Untitled Group") : "Untitled Group"
+            id: countText
+            anchors.centerIn: parent
+            text: (root.groupData && root.groupData.plugins ? root.groupData.plugins.length : 0) + " items"
             font.family: root.fontFamily
-            font.pixelSize: Style.font.subtitle
-            font.bold: true
-            color: root.foreground
-            elide: Text.ElideRight
-            Layout.maximumWidth: Style.space(190)
-          }
-
-          // Plugins count pill
-          Rectangle {
-            height: Style.space(16)
-            width: countText.implicitWidth + Style.space(10)
-            radius: Style.cornerRadius
-            color: Util.alpha(root.foreground, 0.08)
-            border.color: Util.alpha(root.foreground, 0.2)
-            border.width: 1
-
-            Text {
-              id: countText
-              anchors.centerIn: parent
-              text: (root.groupData && root.groupData.plugins ? root.groupData.plugins.length : 0) + " items"
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              color: Qt.darker(root.foreground, 1.25)
-            }
+            font.pixelSize: Style.font.caption
+            color: Qt.darker(root.foreground, 1.25)
           }
         }
       }
 
-      // Action Buttons: Edit & Delete
+      // Spacer pushing Edit & Delete to the right side
+      Item {
+        Layout.fillWidth: true
+      }
+
+      // Action Buttons: Edit & Delete (Right-aligned)
       RowLayout {
         spacing: Style.space(4)
 

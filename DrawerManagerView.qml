@@ -29,26 +29,15 @@ Item {
     anchors.fill: parent
     spacing: Style.space(8)
 
-    // ------------------------------------------------------------- Header with Themed Backdrop
+    // ------------------------------------------------------------- Header with Dynamic Theme Styling
     Rectangle {
       Layout.fillWidth: true
       Layout.preferredHeight: Style.space(48)
       radius: Style.cornerRadius
       clip: true
-      color: "transparent"
-      border.color: Util.alpha(colBorder, 0.3)
+      color: Util.alpha(colAccent, 0.08)
+      border.color: Util.alpha(colBorder, 0.25)
       border.width: 1
-
-      // Themed Gradient
-      Rectangle {
-        anchors.fill: parent
-        gradient: Gradient {
-          orientation: Gradient.Horizontal
-          GradientStop { position: 0.0; color: Util.alpha(colAccent, 0.22) }
-          GradientStop { position: 0.5; color: Util.alpha(colAccent, 0.08) }
-          GradientStop { position: 1.0; color: Util.alpha(colForeground, 0.03) }
-        }
-      }
 
       // Header Row Content
       RowLayout {
@@ -106,7 +95,7 @@ Item {
           radius: Style.cornerRadius
           color: root.currentView === "settings"
             ? Util.alpha(colAccent, 0.35)
-            : (settingsHover.containsMouse ? Util.alpha(Color.background, 0.8) : Util.alpha(Color.background, 0.4))
+            : (settingsHover.containsMouse ? Util.alpha(colForeground, 0.15) : Util.alpha(colForeground, 0.06))
           border.color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colBorder : "transparent")
           border.width: 1
 
@@ -138,7 +127,7 @@ Item {
           width: Style.space(28)
           height: Style.space(28)
           radius: Style.cornerRadius
-          color: closeHover.containsMouse ? Util.alpha(Color.background, 0.8) : Util.alpha(Color.background, 0.4)
+          color: closeHover.containsMouse ? Util.alpha(colForeground, 0.15) : Util.alpha(colForeground, 0.06)
           border.color: closeHover.containsMouse ? colBorder : "transparent"
           border.width: 1
 
@@ -190,7 +179,7 @@ Item {
           Item { Layout.fillWidth: true }
 
           Text {
-            text: "Slide: " + (root.activeSlideDirection === "left" ? "Left 󰁍" : "Right 󰅂")
+            text: "Slide: " + (root.activeSlideDirection === "left" ? "Left 󰁍" : "Right 󰁔")
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colAccent
@@ -329,7 +318,7 @@ Item {
         }
       }
 
-      // 2. SETTINGS VIEW
+      // 2. SETTINGS VIEW (Clean Segmented Toggle)
       ColumnLayout {
         anchors.fill: parent
         visible: root.currentView === "settings"
@@ -344,7 +333,7 @@ Item {
             width: Style.space(28)
             height: Style.space(28)
             radius: Style.cornerRadius
-            color: setBackHover.containsMouse ? Util.alpha(root.colForeground, 0.12) : Util.alpha(root.colForeground, 0.05)
+            color: setBackHover.containsMouse ? Util.alpha(root.colForeground, 0.15) : Util.alpha(root.colForeground, 0.06)
             border.color: Util.alpha(root.colBorder, 0.3)
             border.width: 1
 
@@ -375,176 +364,128 @@ Item {
           }
         }
 
-        // Section: Slide Direction
+        // Section: Slide Direction Segmented Toggle
         ColumnLayout {
           Layout.fillWidth: true
-          spacing: Style.space(6)
+          spacing: Style.space(8)
 
           Text {
-            text: "DRAWER EXPANSION DIRECTION"
+            text: "EXPANSION DIRECTION"
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             font.bold: true
             color: Qt.darker(root.colForeground, 1.4)
           }
 
+          // Horizontal Segmented Toggle Control
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(40)
+            radius: Style.cornerRadius
+            color: Util.alpha(root.colForeground, 0.05)
+            border.color: Util.alpha(root.colBorder, 0.3)
+            border.width: 1
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: Style.space(3)
+              spacing: Style.space(3)
+
+              // Toggle Option 1: Slide Left (󰁍)
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.activeSlideDirection === "left" 
+                  ? root.colAccent 
+                  : (leftHover.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(6)
+
+                  Text {
+                    text: "󰁍"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    color: root.activeSlideDirection === "left" ? "#12131a" : root.colForeground
+                  }
+
+                  Text {
+                    text: "Slide Left"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.activeSlideDirection === "left"
+                    color: root.activeSlideDirection === "left" ? "#12131a" : root.colForeground
+                  }
+                }
+
+                MouseArea {
+                  id: leftHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (host && host.updateSetting) host.updateSetting("slideDirection", "left")
+                  }
+                }
+              }
+
+              // Toggle Option 2: Slide Right (󰁔)
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Style.cornerRadius - 1
+                color: root.activeSlideDirection === "right" 
+                  ? root.colAccent 
+                  : (rightHover.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                RowLayout {
+                  anchors.centerIn: parent
+                  spacing: Style.space(6)
+
+                  Text {
+                    text: "󰁔"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    color: root.activeSlideDirection === "right" ? "#12131a" : root.colForeground
+                  }
+
+                  Text {
+                    text: "Slide Right"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: root.activeSlideDirection === "right"
+                    color: root.activeSlideDirection === "right" ? "#12131a" : root.colForeground
+                  }
+                }
+
+                MouseArea {
+                  id: rightHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (host && host.updateSetting) host.updateSetting("slideDirection", "right")
+                  }
+                }
+              }
+            }
+          }
+
           Text {
-            text: "Select whether drawer plugins slide out to the left or right of the group icon on the top bar."
+            text: root.activeSlideDirection === "left" 
+              ? "Drawer group icon sits on the right, plugins slide out to the left on top bar." 
+              : "Drawer group icon sits on the left, plugins slide out to the right on top bar."
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
-            color: root.colDim
+            color: Qt.darker(root.colForeground, 1.45)
+            Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-          }
-
-          // Option 1: Slide to Right
-          Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: Style.space(52)
-            radius: Style.cornerRadius
-            color: root.activeSlideDirection === "right"
-              ? Util.alpha(root.colAccent, 0.15)
-              : (rightOptHover.containsMouse ? Util.alpha(root.colForeground, 0.07) : Util.alpha(root.colForeground, 0.03))
-            border.color: root.activeSlideDirection === "right"
-              ? root.colAccent
-              : (rightOptHover.containsMouse ? Util.alpha(root.colAccent, 0.4) : Util.alpha(root.colBorder, 0.25))
-            border.width: 1
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-            Behavior on border.color { ColorAnimation { duration: 120 } }
-
-            RowLayout {
-              anchors.fill: parent
-              anchors.leftMargin: Style.space(12)
-              anchors.rightMargin: Style.space(12)
-              spacing: Style.space(10)
-
-              // Radio / Check Icon
-              Rectangle {
-                width: Style.space(22)
-                height: Style.space(22)
-                radius: width / 2
-                color: root.activeSlideDirection === "right" ? root.colAccent : "transparent"
-                border.color: root.activeSlideDirection === "right" ? root.colAccent : Qt.darker(root.colForeground, 1.4)
-                border.width: 1.5
-
-                Text {
-                  anchors.centerIn: parent
-                  text: "✓"
-                  font.family: root.fontFamily
-                  font.pixelSize: 10
-                  font.bold: true
-                  color: "#12131a"
-                  visible: root.activeSlideDirection === "right"
-                }
-              }
-
-              // Text info
-              ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                Text {
-                  text: "Slide to Right  󰅂"
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  font.bold: root.activeSlideDirection === "right"
-                  color: root.colForeground
-                }
-
-                Text {
-                  text: "Group icon sits on left, plugins expand towards the right"
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  color: Qt.darker(root.colForeground, 1.4)
-                }
-              }
-            }
-
-            MouseArea {
-              id: rightOptHover
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                if (host && host.updateSetting) host.updateSetting("slideDirection", "right")
-              }
-            }
-          }
-
-          // Option 2: Slide to Left
-          Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: Style.space(52)
-            radius: Style.cornerRadius
-            color: root.activeSlideDirection === "left"
-              ? Util.alpha(root.colAccent, 0.15)
-              : (leftOptHover.containsMouse ? Util.alpha(root.colForeground, 0.07) : Util.alpha(root.colForeground, 0.03))
-            border.color: root.activeSlideDirection === "left"
-              ? root.colAccent
-              : (leftOptHover.containsMouse ? Util.alpha(root.colAccent, 0.4) : Util.alpha(root.colBorder, 0.25))
-            border.width: 1
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-            Behavior on border.color { ColorAnimation { duration: 120 } }
-
-            RowLayout {
-              anchors.fill: parent
-              anchors.leftMargin: Style.space(12)
-              anchors.rightMargin: Style.space(12)
-              spacing: Style.space(10)
-
-              // Radio / Check Icon
-              Rectangle {
-                width: Style.space(22)
-                height: Style.space(22)
-                radius: width / 2
-                color: root.activeSlideDirection === "left" ? root.colAccent : "transparent"
-                border.color: root.activeSlideDirection === "left" ? root.colAccent : Qt.darker(root.colForeground, 1.4)
-                border.width: 1.5
-
-                Text {
-                  anchors.centerIn: parent
-                  text: "✓"
-                  font.family: root.fontFamily
-                  font.pixelSize: 10
-                  font.bold: true
-                  color: "#12131a"
-                  visible: root.activeSlideDirection === "left"
-                }
-              }
-
-              // Text info
-              ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-
-                Text {
-                  text: "Slide to Left  󰁍"
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  font.bold: root.activeSlideDirection === "left"
-                  color: root.colForeground
-                }
-
-                Text {
-                  text: "Group icon sits on right, plugins expand towards the left"
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                  color: Qt.darker(root.colForeground, 1.4)
-                }
-              }
-            }
-
-            MouseArea {
-              id: leftOptHover
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                if (host && host.updateSetting) host.updateSetting("slideDirection", "left")
-              }
-            }
           }
         }
 
@@ -644,7 +585,7 @@ Item {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: "Are you sure you want to delete '" + (root.deletingGroup ? root.deletingGroup.name : "") + "'?\nPlugins in this group will not be uninstalled."
+            text: "Are you sure you want to delete '" + (root.deletingGroup ? root.deletingGroup.name : "") + "'?\nPlugins will return to your top bar."
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colDim
