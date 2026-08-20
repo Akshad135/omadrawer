@@ -66,11 +66,45 @@ BarWidget {
     onLoaded: root.loadGroups(text())
   }
 
+  function syncShellLayout(groups) {
+    if (!bar || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
+    var groupedMap = {}
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i]
+      if (g && g.plugins && Array.isArray(g.plugins)) {
+        for (var j = 0; j < g.plugins.length; j++) {
+          groupedMap[g.plugins[j]] = true
+        }
+      }
+    }
+
+    bar.shell.mutateShellConfig(function(config) {
+      if (!config || !config.bar || !config.bar.layout) return
+      var sections = ["left", "center", "right"]
+      for (var s = 0; s < sections.length; s++) {
+        var sec = sections[s]
+        var list = config.bar.layout[sec]
+        if (Array.isArray(list)) {
+          var filtered = list.filter(function(entry) {
+            var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "")
+            if (id === "akshad.omadrawer") return true
+            return !groupedMap[id]
+          })
+          if (filtered.length !== list.length) {
+            config.bar.layout[sec] = filtered
+          }
+        }
+      }
+    })
+  }
+
   function loadGroups(raw) {
     var parsed = Logic.parseGroups(raw)
     root.groupsList = parsed
     if (!raw || raw.trim().length === 0) {
       root.saveAllGroups(parsed)
+    } else {
+      Qt.callLater(function() { root.syncShellLayout(parsed) })
     }
   }
 
@@ -78,6 +112,7 @@ BarWidget {
     root.groupsList = list
     var serialized = Logic.serializeGroups(list)
     groupsFile.setText(serialized)
+    Qt.callLater(function() { root.syncShellLayout(list) })
   }
 
   function saveGroup(groupData) {

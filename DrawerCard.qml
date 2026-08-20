@@ -9,14 +9,12 @@ Rectangle {
   id: root
 
   property var groupData: null
-  property bool isExpanded: false
   property string fontFamily: Style.font.family
   property color foreground: Color.foreground
   property color accent: Color.accent
 
   signal editClicked()
   signal deleteClicked()
-  signal toggleClicked()
 
   readonly property color colBorder: Style.normalBorderFor(foreground, accent)
   readonly property color colCardBg: Style.normalFillFor(foreground, accent)
@@ -25,7 +23,7 @@ Rectangle {
   implicitHeight: cardLayout.implicitHeight + Style.space(20)
   radius: Style.cornerRadius
   color: cardMouse.containsMouse ? Util.alpha(accent, 0.08) : Util.alpha(foreground, 0.04)
-  border.color: cardMouse.containsMouse ? Util.alpha(accent, 0.45) : (isExpanded ? Util.alpha(accent, 0.6) : Util.alpha(colBorder, 0.3))
+  border.color: cardMouse.containsMouse ? Util.alpha(accent, 0.45) : Util.alpha(colBorder, 0.3)
   border.width: 1
 
   Behavior on color { ColorAnimation { duration: 150 } }
@@ -36,7 +34,7 @@ Rectangle {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    onClicked: root.toggleClicked()
+    onClicked: root.editClicked()
   }
 
   ColumnLayout {
@@ -52,13 +50,13 @@ Rectangle {
       Layout.fillWidth: true
       spacing: Style.space(8)
 
-      // Group Icon Avatar Badge
+      // Group Icon Badge
       Rectangle {
         width: Style.space(34)
         height: Style.space(34)
         radius: Style.cornerRadius
-        color: root.isExpanded ? Util.alpha(root.accent, 0.3) : Util.alpha(root.accent, 0.18)
-        border.color: root.isExpanded ? root.accent : Util.alpha(root.accent, 0.55)
+        color: Util.alpha(root.accent, 0.18)
+        border.color: Util.alpha(root.accent, 0.55)
         border.width: 1
 
         Text {
@@ -85,7 +83,7 @@ Rectangle {
             font.bold: true
             color: root.foreground
             elide: Text.ElideRight
-            Layout.maximumWidth: Style.space(180)
+            Layout.maximumWidth: Style.space(190)
           }
 
           // Plugins count pill
@@ -93,8 +91,8 @@ Rectangle {
             height: Style.space(16)
             width: countText.implicitWidth + Style.space(10)
             radius: Style.cornerRadius
-            color: root.isExpanded ? Util.alpha(root.accent, 0.15) : Util.alpha(root.foreground, 0.08)
-            border.color: root.isExpanded ? Util.alpha(root.accent, 0.5) : Util.alpha(root.foreground, 0.2)
+            color: Util.alpha(root.foreground, 0.08)
+            border.color: Util.alpha(root.foreground, 0.2)
             border.width: 1
 
             Text {
@@ -103,7 +101,7 @@ Rectangle {
               text: (root.groupData && root.groupData.plugins ? root.groupData.plugins.length : 0) + " items"
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
-              color: root.isExpanded ? root.accent : Qt.darker(root.foreground, 1.25)
+              color: Qt.darker(root.foreground, 1.25)
             }
           }
         }
@@ -118,35 +116,9 @@ Rectangle {
         }
       }
 
-      // Action Buttons: Toggle, Edit & Delete
+      // Action Buttons: Edit & Delete
       RowLayout {
         spacing: Style.space(4)
-
-        // Expand/Collapse Bar Toggle Button
-        Rectangle {
-          width: Style.space(28)
-          height: Style.space(28)
-          radius: Style.cornerRadius
-          color: toggleHover.containsMouse ? Util.alpha(root.accent, 0.25) : (root.isExpanded ? Util.alpha(root.accent, 0.18) : Util.alpha(Color.background, 0.4))
-          border.color: (toggleHover.containsMouse || root.isExpanded) ? root.accent : Util.alpha(root.colBorder, 0.4)
-          border.width: 1
-
-          Text {
-            anchors.centerIn: parent
-            text: root.isExpanded ? "󰅃" : "󰅀"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            color: (toggleHover.containsMouse || root.isExpanded) ? root.accent : Qt.darker(root.foreground, 1.3)
-          }
-
-          MouseArea {
-            id: toggleHover
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.toggleClicked()
-          }
-        }
 
         // Edit Button
         Rectangle {

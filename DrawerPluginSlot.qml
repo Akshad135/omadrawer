@@ -22,17 +22,13 @@ Item {
 
   readonly property var pluginMeta: Logic.findPluginMeta(pluginId)
   readonly property bool isRegistered: registryComponent !== null
+  readonly property var activeItem: isRegistered ? loader.item : fallbackButton
 
-  implicitWidth: isRegistered 
-    ? (loader.item && loader.item.visible ? (bar && bar.vertical ? bar.barSize : loader.item.implicitWidth) : 0) 
-    : fallbackButton.implicitWidth
-  implicitHeight: isRegistered 
-    ? (loader.item && loader.item.visible ? loader.item.implicitHeight : 0) 
-    : fallbackButton.implicitHeight
+  implicitWidth: activeItem ? (bar && bar.vertical ? bar.barSize : (activeItem.implicitWidth > 0 ? activeItem.implicitWidth : Style.bar.iconSlot)) : fallbackButton.implicitWidth
+  implicitHeight: activeItem ? (activeItem.implicitHeight > 0 ? activeItem.implicitHeight : (bar ? bar.barSize : Style.bar.sizeHorizontal)) : fallbackButton.implicitHeight
 
   width: implicitWidth
   height: implicitHeight
-  visible: implicitWidth > 0 && implicitHeight > 0
 
   Loader {
     id: loader
@@ -45,11 +41,22 @@ Item {
       Qt.callLater(injectProps)
     }
 
+    onItemChanged: {
+      injectProps()
+      Qt.callLater(injectProps)
+    }
+
     function injectProps() {
       if (!item) return
       if ("bar" in item) item.bar = root.bar
       if ("moduleName" in item) item.moduleName = root.pluginId
       if ("settings" in item) item.settings = ({})
+    }
+  }
+
+  onBarChanged: {
+    if (loader.item) {
+      if ("bar" in loader.item) loader.item.bar = root.bar
     }
   }
 
