@@ -82,26 +82,9 @@ Rectangle {
         Layout.fillWidth: true
       }
 
-      // Pills: items count, position, slide direction
+      // Pills: position, slide direction
       RowLayout {
         spacing: Style.space(6)
-        Rectangle {
-          height: Style.space(16)
-          width: countText.implicitWidth + Style.space(10)
-          radius: Style.cornerRadius
-          color: Util.alpha(root.foreground, 0.08)
-          border.color: Util.alpha(root.foreground, 0.2)
-          border.width: 1
-
-          Text {
-            id: countText
-            anchors.centerIn: parent
-            text: (root.groupData && root.groupData.plugins ? root.groupData.plugins.length : 0) + " items"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            color: Qt.darker(root.foreground, 1.25)
-          }
-        }
 
         // Position pill
         Rectangle {
