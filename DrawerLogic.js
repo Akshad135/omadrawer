@@ -20,6 +20,24 @@ var KNOWN_PLUGINS = [
   { id: "omarchy.tray", name: "System Tray", icon: "󰇄", category: "System", desc: "Status notifier items" }
 ];
 
+var EXCLUDED_PLUGIN_IDS = [
+  "akshad.omadrawer",
+  "omarchy.indicators",
+  "indicators"
+];
+
+function isExcludedPlugin(pluginId) {
+  if (!pluginId || typeof pluginId !== "string") return true;
+  var id = pluginId.trim();
+  if (id === "") return true;
+  for (var i = 0; i < EXCLUDED_PLUGIN_IDS.length; i++) {
+    if (id === EXCLUDED_PLUGIN_IDS[i] || id === "omarchy." + EXCLUDED_PLUGIN_IDS[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
 var PRESET_ICONS = [
   // Drawers & Boxes
   "󰏖", "󰀻", "󰅪", "󰆦", "󰆧", "󰒓", "󰘳", "󰘵", "󰏘", "󰏗",
@@ -111,7 +129,7 @@ function serializeData(groupsList, settings, pluginOrigins) {
   return JSON.stringify({
     version: 1,
     updatedAt: new Date().toISOString(),
-    settings: settings || { slideDirection: "right" },
+    settings: settings || { displayMode: "icon", slideDirection: "right" },
     pluginOrigins: pluginOrigins || {},
     groups: groupsList || []
   }, null, 2) + "\n";

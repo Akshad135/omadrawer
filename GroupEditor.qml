@@ -45,7 +45,7 @@ Rectangle {
     function addId(id) {
       if (!id || typeof id !== "string") return
       id = id.trim()
-      if (id === "" || id === "akshad.omadrawer" || seen[id]) return
+      if (id === "" || Logic.isExcludedPlugin(id) || seen[id]) return
       seen[id] = true
       ids.push(id)
     }
@@ -99,6 +99,7 @@ Rectangle {
 
     for (var i = 0; i < ids.length; i++) {
       var id = ids[i]
+      if (Logic.isExcludedPlugin(id)) continue
       if (disabledMap[id]) continue
       if (otherGroupsPluginMap[id]) continue
 
