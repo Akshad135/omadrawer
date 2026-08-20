@@ -21,7 +21,18 @@ var KNOWN_PLUGINS = [
 ];
 
 var PRESET_ICONS = [
-  "󰏖", "󰵪", "󰍛", "󰕮", "󰒓", "󰀻", "󰍹", "󰤨", "󰌌", "󰇄", "󰂯", "󰐥", "󰖐", "󰥔", "⚑", "󰂚"
+  // Drawers & Boxes
+  "󰏖", "󰀻", "󰅪", "󰆦", "󰆧", "󰒓", "󰘳", "󰘵", "󰏘", "󰏗",
+  // Media & Audio
+  "󰵪", "󰐊", "󰕮", "󰎆", "󰝚", "󰑋", "󰝰", "󰗃", "󰕼", "󰎈",
+  // Gaming & Play
+  "󰌌", "⚑", "󰊖", "󰊗", "󰊕", "󰊢", "󰍳", "󰡏", "󰓎", "󰓏",
+  // System & Hardware
+  "󰍛", "󰢮", "󰘚", "󰍹", "󰐥", "󰌢", "󰌪", "󰒋", "󰚌", "󰈙",
+  // Network & Devices
+  "󰤨", "󰂯", "󰇄", "󰍬", "󰕢", "󰢝", "󰂚", "󰖩", "󰖩", "󰅐",
+  // Tools & Productivity
+  "󰥔", "󰖐", "󰃭", "󰈙", "󰏝", "󰃟", "󰄬", "󰆍", "󰅨", "󰘐"
 ];
 
 function getDefaultGroups() {
@@ -31,6 +42,7 @@ function getDefaultGroups() {
       name: "Media & Entertainment",
       icon: "󰵪",
       position: "right",
+      direction: "right",
       description: "",
       enabled: true,
       plugins: ["akshad135.anisync", "akshad135.wordle", "jankeesvw.omasweeper"]
@@ -44,7 +56,6 @@ function findPluginMeta(pluginId) {
       return KNOWN_PLUGINS[i];
     }
   }
-  // Fallback if third-party plugin unknown
   var shortName = pluginId.split(".").pop();
   return {
     id: pluginId,

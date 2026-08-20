@@ -14,6 +14,7 @@ Rectangle {
   property color foreground: Color.foreground
   property color accent: Color.accent
   property string viewMode: "editor" // "editor" | "picker"
+  property bool showIconPicker: false
 
   // Form State
   property string formId: ""
@@ -130,6 +131,7 @@ Rectangle {
       formDirection = "right"
       selectedPluginIds = []
     }
+    showIconPicker = false
     viewMode = "editor"
   }
 
@@ -232,7 +234,7 @@ Rectangle {
       }
     }
 
-    // Scrollable Form Fields
+    // Scrollable Form Body
     Flickable {
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -245,328 +247,362 @@ Rectangle {
         width: parent.width
         spacing: Style.space(10)
 
-        // Field 1: Group Name
-        ColumnLayout {
+        // ----------------- Section 1: Icon Avatar & Group Name Card
+        Rectangle {
           Layout.fillWidth: true
-          spacing: Style.space(4)
+          implicitHeight: nameCardLayout.implicitHeight + Style.space(16)
+          radius: Style.cornerRadius
+          color: Util.alpha(root.foreground, 0.03)
+          border.color: Util.alpha(root.colBorder, 0.25)
+          border.width: 1
 
-          Text {
-            text: "GROUP NAME"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            color: Qt.darker(root.foreground, 1.4)
-          }
+          ColumnLayout {
+            id: nameCardLayout
+            anchors.fill: parent
+            anchors.margins: Style.space(8)
+            spacing: Style.space(8)
 
-          TextField {
-            id: nameField
-            Layout.fillWidth: true
-            text: root.formName
-            placeholderText: "e.g. Media & Fun, System Tools"
-            foreground: root.foreground
-            accent: root.accent
-            onTextChanged: root.formName = text
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: Style.space(10)
+
+              // Icon Avatar Button
+              Rectangle {
+                width: Style.space(46)
+                height: Style.space(46)
+                radius: Style.cornerRadius
+                color: root.showIconPicker ? Util.alpha(root.accent, 0.3) : (iconPickHover.containsMouse ? Util.alpha(root.accent, 0.22) : Util.alpha(root.accent, 0.12))
+                border.color: root.showIconPicker ? root.accent : (iconPickHover.containsMouse ? root.accent : Util.alpha(root.accent, 0.5))
+                border.width: 1.5
+
+                ColumnLayout {
+                  anchors.centerIn: parent
+                  spacing: 0
+
+                  Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: root.formIcon
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.heading
+                    color: root.accent
+                  }
+
+                  Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Edit"
+                    font.family: root.fontFamily
+                    font.pixelSize: 8
+                    font.bold: true
+                    color: Qt.darker(root.accent, 1.2)
+                  }
+                }
+
+                MouseArea {
+                  id: iconPickHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.showIconPicker = !root.showIconPicker
+                }
+              }
+
+              // Group Name Input
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Style.space(3)
+
+                Text {
+                  text: "GROUP NAME"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  color: Qt.darker(root.foreground, 1.4)
+                }
+
+                TextField {
+                  id: nameField
+                  Layout.fillWidth: true
+                  text: root.formName
+                  placeholderText: "e.g. Games, Media, Tools"
+                  foreground: root.foreground
+                  accent: root.accent
+                  onTextChanged: root.formName = text
+                }
+              }
+            }
+
+            // Expandable 50+ Preset Icons Grid
+            ColumnLayout {
+              Layout.fillWidth: true
+              visible: root.showIconPicker
+              spacing: Style.space(6)
+
+              Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: Util.alpha(root.colBorder, 0.2)
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                Text {
+                  text: "CHOOSE AN ICON"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  color: root.accent
+                }
+                Item { Layout.fillWidth: true }
+                Text {
+                  text: "Tap to select"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  color: Qt.darker(root.foreground, 1.5)
+                }
+              }
+
+              Flow {
+                Layout.fillWidth: true
+                spacing: Style.space(4)
+
+                Repeater {
+                  model: Logic.PRESET_ICONS
+
+                  delegate: Rectangle {
+                    width: Style.space(32)
+                    height: Style.space(32)
+                    radius: Style.cornerRadius
+                    color: root.formIcon === modelData 
+                      ? root.accent 
+                      : (iconGridHover.containsMouse ? Util.alpha(root.foreground, 0.12) : Util.alpha(root.foreground, 0.04))
+                    border.color: root.formIcon === modelData 
+                      ? root.accent 
+                      : (iconGridHover.containsMouse ? Util.alpha(root.accent, 0.6) : Util.alpha(root.colBorder, 0.25))
+                    border.width: 1
+
+                    Text {
+                      anchors.centerIn: parent
+                      text: modelData
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.body
+                      color: root.formIcon === modelData ? "#12131a" : root.foreground
+                    }
+
+                    MouseArea {
+                      id: iconGridHover
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        root.formIcon = modelData
+                        root.showIconPicker = false
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
 
-        // Field 2: Group Icon Preset Selector
-        ColumnLayout {
+        // ----------------- Section 2: Position & Direction Row (Clean Layout)
+        RowLayout {
           Layout.fillWidth: true
-          spacing: Style.space(4)
+          spacing: Style.space(8)
 
-          RowLayout {
+          // Position Toggle Card
+          ColumnLayout {
             Layout.fillWidth: true
+            spacing: Style.space(4)
+
             Text {
-              text: "GROUP ICON"
+              text: "BAR POSITION"
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               font.bold: true
               color: Qt.darker(root.foreground, 1.4)
             }
-            Item { Layout.fillWidth: true }
-            Text {
-              text: "Selected: " + root.formIcon
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              color: root.accent
-            }
-          }
 
-          Flow {
-            Layout.fillWidth: true
-            spacing: Style.space(4)
+            Rectangle {
+              Layout.fillWidth: true
+              implicitHeight: Style.space(36)
+              radius: Style.cornerRadius
+              color: Util.alpha(root.foreground, 0.04)
+              border.color: Util.alpha(root.colBorder, 0.3)
+              border.width: 1
 
-            Repeater {
-              model: Logic.PRESET_ICONS
+              RowLayout {
+                anchors.fill: parent
+                anchors.margins: Style.space(2)
+                spacing: Style.space(2)
 
-              delegate: Rectangle {
-                width: Style.space(30)
-                height: Style.space(30)
-                radius: Style.cornerRadius
-                color: root.formIcon === modelData 
-                  ? Util.alpha(root.accent, 0.35) 
-                  : (iconHover.containsMouse ? Util.alpha(root.foreground, 0.1) : Util.alpha(root.foreground, 0.04))
-                border.color: root.formIcon === modelData 
-                  ? root.accent 
-                  : (iconHover.containsMouse ? Util.alpha(root.accent, 0.5) : Util.alpha(root.colBorder, 0.25))
-                border.width: 1
-
-                Text {
-                  anchors.centerIn: parent
-                  text: modelData
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  color: root.formIcon === modelData ? root.accent : root.foreground
-                }
-
-                MouseArea {
-                  id: iconHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formIcon = modelData
-                }
-              }
-            }
-          }
-        }
-
-        // Field 3: Group Top Bar Positioning (Left, Center, Right)
-        ColumnLayout {
-          Layout.fillWidth: true
-          spacing: Style.space(6)
-
-          Text {
-            text: "TOP BAR POSITION"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            color: Qt.darker(root.foreground, 1.4)
-          }
-
-          // Horizontal Segmented Toggle for Positioning
-          Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: Style.space(38)
-            radius: Style.cornerRadius
-            color: Util.alpha(root.foreground, 0.05)
-            border.color: Util.alpha(root.colBorder, 0.3)
-            border.width: 1
-
-            RowLayout {
-              anchors.fill: parent
-              anchors.margins: Style.space(3)
-              spacing: Style.space(3)
-
-              // Position: Left
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.formPosition === "left" ? root.accent : (posLeftHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(4)
+                // Left
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  radius: Style.cornerRadius - 1
+                  color: root.formPosition === "left" ? root.accent : (posLeftH.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
                   Text {
-                    text: "󰁍"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    color: root.formPosition === "left" ? "#12131a" : root.foreground
-                  }
-                  Text {
+                    anchors.centerIn: parent
                     text: "Left"
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.caption
                     font.bold: root.formPosition === "left"
                     color: root.formPosition === "left" ? "#12131a" : root.foreground
                   }
-                }
-
-                MouseArea {
-                  id: posLeftHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formPosition = "left"
-                }
-              }
-
-              // Position: Center
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.formPosition === "center" ? root.accent : (posCenterHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(4)
-                  Text {
-                    text: "󰅀"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    color: root.formPosition === "center" ? "#12131a" : root.foreground
+                  MouseArea {
+                    id: posLeftH
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.formPosition = "left"
                   }
+                }
+
+                // Center
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  radius: Style.cornerRadius - 1
+                  color: root.formPosition === "center" ? root.accent : (posCenterH.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
                   Text {
+                    anchors.centerIn: parent
                     text: "Center"
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.caption
                     font.bold: root.formPosition === "center"
                     color: root.formPosition === "center" ? "#12131a" : root.foreground
                   }
-                }
-
-                MouseArea {
-                  id: posCenterHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formPosition = "center"
-                }
-              }
-
-              // Position: Right
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.formPosition === "right" ? root.accent : (posRightHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(4)
-                  Text {
-                    text: "󰁔"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    color: root.formPosition === "right" ? "#12131a" : root.foreground
+                  MouseArea {
+                    id: posCenterH
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.formPosition = "center"
                   }
+                }
+
+                // Right
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  radius: Style.cornerRadius - 1
+                  color: root.formPosition === "right" ? root.accent : (posRightH.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
                   Text {
+                    anchors.centerIn: parent
                     text: "Right"
                     font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
+                    font.pixelSize: Style.font.caption
                     font.bold: root.formPosition === "right"
                     color: root.formPosition === "right" ? "#12131a" : root.foreground
                   }
-                }
-
-                MouseArea {
-                  id: posRightHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formPosition = "right"
+                  MouseArea {
+                    id: posRightH
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.formPosition = "right"
+                  }
                 }
               }
             }
           }
-        }
 
-        // Field 4: Group Slide Direction (Left vs Right)
-        ColumnLayout {
-          Layout.fillWidth: true
-          spacing: Style.space(6)
-
-          Text {
-            text: "SLIDE EXPANSION DIRECTION"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            color: Qt.darker(root.foreground, 1.4)
-          }
-
-          // Horizontal Segmented Toggle for Slide Direction
-          Rectangle {
+          // Slide Direction Toggle Card
+          ColumnLayout {
             Layout.fillWidth: true
-            implicitHeight: Style.space(38)
-            radius: Style.cornerRadius
-            color: Util.alpha(root.foreground, 0.05)
-            border.color: Util.alpha(root.colBorder, 0.3)
-            border.width: 1
+            spacing: Style.space(4)
 
-            RowLayout {
-              anchors.fill: parent
-              anchors.margins: Style.space(3)
-              spacing: Style.space(3)
+            Text {
+              text: "SLIDE DIRECTION"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              color: Qt.darker(root.foreground, 1.4)
+            }
 
-              // Slide Left
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.formDirection === "left" ? root.accent : (dirLeftHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
+            Rectangle {
+              Layout.fillWidth: true
+              implicitHeight: Style.space(36)
+              radius: Style.cornerRadius
+              color: Util.alpha(root.foreground, 0.04)
+              border.color: Util.alpha(root.colBorder, 0.3)
+              border.width: 1
 
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(4)
-                  Text {
-                    text: "󰁍"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    color: root.formDirection === "left" ? "#12131a" : root.foreground
+              RowLayout {
+                anchors.fill: parent
+                anchors.margins: Style.space(2)
+                spacing: Style.space(2)
+
+                // Slide Left
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  radius: Style.cornerRadius - 1
+                  color: root.formDirection === "left" ? root.accent : (dirLeftH.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                  RowLayout {
+                    anchors.centerIn: parent
+                    spacing: Style.space(4)
+                    Text {
+                      text: "󰁍"
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      color: root.formDirection === "left" ? "#12131a" : root.foreground
+                    }
+                    Text {
+                      text: "Left"
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: root.formDirection === "left"
+                      color: root.formDirection === "left" ? "#12131a" : root.foreground
+                    }
                   }
-                  Text {
-                    text: "Slide Left"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: root.formDirection === "left"
-                    color: root.formDirection === "left" ? "#12131a" : root.foreground
-                  }
-                }
-
-                MouseArea {
-                  id: dirLeftHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formDirection = "left"
-                }
-              }
-
-              // Slide Right
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.formDirection === "right" ? root.accent : (dirRightHover.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(4)
-                  Text {
-                    text: "󰁔"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    color: root.formDirection === "right" ? "#12131a" : root.foreground
-                  }
-                  Text {
-                    text: "Slide Right"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: root.formDirection === "right"
-                    color: root.formDirection === "right" ? "#12131a" : root.foreground
+                  MouseArea {
+                    id: dirLeftH
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.formDirection = "left"
                   }
                 }
 
-                MouseArea {
-                  id: dirRightHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.formDirection = "right"
+                // Slide Right
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  radius: Style.cornerRadius - 1
+                  color: root.formDirection === "right" ? root.accent : (dirRightH.containsMouse ? Util.alpha(root.foreground, 0.1) : "transparent")
+                  RowLayout {
+                    anchors.centerIn: parent
+                    spacing: Style.space(4)
+                    Text {
+                      text: "󰁔"
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      color: root.formDirection === "right" ? "#12131a" : root.foreground
+                    }
+                    Text {
+                      text: "Right"
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: root.formDirection === "right"
+                      color: root.formDirection === "right" ? "#12131a" : root.foreground
+                    }
+                  }
+                  MouseArea {
+                    id: dirRightH
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.formDirection = "right"
+                  }
                 }
               }
             }
           }
         }
 
-        // Field 5: Current Added Plugins List with Reordering
+        // ----------------- Section 3: Ordered Group Plugins List
         ColumnLayout {
           Layout.fillWidth: true
           spacing: Style.space(6)
@@ -574,7 +610,7 @@ Rectangle {
           RowLayout {
             Layout.fillWidth: true
             Text {
-              text: "GROUP PLUGINS (" + root.selectedPluginIds.length + ")"
+              text: "PLUGINS IN THIS GROUP (" + root.selectedPluginIds.length + ")"
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               font.bold: true
@@ -589,11 +625,11 @@ Rectangle {
             }
           }
 
-          // Empty State if no plugins assigned yet
+          // Empty state
           Rectangle {
             visible: root.selectedPluginIds.length === 0
             Layout.fillWidth: true
-            implicitHeight: Style.space(56)
+            implicitHeight: Style.space(52)
             radius: Style.cornerRadius
             color: Util.alpha(root.foreground, 0.03)
             border.color: Util.alpha(root.colBorder, 0.2)
@@ -601,7 +637,7 @@ Rectangle {
 
             Text {
               anchors.centerIn: parent
-              text: "No plugins added yet. Click 'Update Plugins' below."
+              text: "No plugins selected. Tap '+ Select Plugins' below."
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
               color: Qt.darker(root.foreground, 1.4)
@@ -613,7 +649,6 @@ Rectangle {
             model: root.selectedPluginIds
 
             delegate: Rectangle {
-              id: pluginItemDelegate
               readonly property var meta: Logic.findPluginMeta(modelData)
               readonly property int itemIndex: index
               Layout.fillWidth: true
@@ -738,7 +773,7 @@ Rectangle {
             }
           }
 
-          // "+ Update Plugins" Button
+          // "+ Select / Update Plugins" Button
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: Style.space(36)
@@ -763,7 +798,7 @@ Rectangle {
               }
 
               Text {
-                text: root.selectedPluginIds.length === 0 ? "Add Plugins to Group" : "Update Plugins"
+                text: root.selectedPluginIds.length === 0 ? "Select Plugins for Group" : "Update Plugins Selection"
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
                 font.bold: true
@@ -953,7 +988,7 @@ Rectangle {
               anchors.rightMargin: Style.space(8)
               spacing: Style.space(8)
 
-              // Checkbox / Indicator
+              // Checkbox
               Rectangle {
                 width: Style.space(18)
                 height: Style.space(18)

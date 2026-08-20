@@ -10,7 +10,7 @@ Item {
 
   property var host: null
   property var groupsList: host ? host.groupsList : []
-  property string currentView: "list" // "list" | "editor" | "settings" | "delete_confirm"
+  property string currentView: "list" // "list" | "editor" | "delete_confirm"
   property var editingGroup: null
   property var deletingGroup: null
 
@@ -20,7 +20,6 @@ Item {
   readonly property color colBorder: Style.normalBorderFor(Color.foreground, Color.accent)
   readonly property color colCardBg: Style.normalFillFor(Color.foreground, Color.accent)
   readonly property string fontFamily: host && host.bar ? host.bar.fontFamily : Style.font.family
-  readonly property string activeSlideDirection: host ? (host.slideDirection || "right") : "right"
 
   implicitWidth: Style.space(420)
   implicitHeight: Style.space(510)
@@ -77,9 +76,7 @@ Item {
           }
 
           Text {
-            text: root.currentView === "settings" 
-              ? "Preferences" 
-              : (root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured")
+            text: root.groupsList.length + " " + (root.groupsList.length === 1 ? "group" : "groups") + " configured"
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             color: colDim
@@ -87,40 +84,6 @@ Item {
         }
 
         Item { Layout.fillWidth: true }
-
-        // Settings Button (Top-Right)
-        Rectangle {
-          width: Style.space(28)
-          height: Style.space(28)
-          radius: Style.cornerRadius
-          color: root.currentView === "settings"
-            ? Util.alpha(colAccent, 0.35)
-            : (settingsHover.containsMouse ? Util.alpha(colForeground, 0.15) : Util.alpha(colForeground, 0.06))
-          border.color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colBorder : "transparent")
-          border.width: 1
-
-          Text {
-            anchors.centerIn: parent
-            text: "󰒓"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            color: root.currentView === "settings" ? colAccent : (settingsHover.containsMouse ? colForeground : colDim)
-          }
-
-          MouseArea {
-            id: settingsHover
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-              if (root.currentView === "settings") {
-                root.currentView = "list"
-              } else {
-                root.currentView = "settings"
-              }
-            }
-          }
-        }
 
         // Close Button
         Rectangle {
@@ -311,208 +274,7 @@ Item {
         }
       }
 
-      // 2. SETTINGS VIEW (Clean Segmented Toggle)
-      ColumnLayout {
-        anchors.fill: parent
-        visible: root.currentView === "settings"
-        spacing: Style.space(12)
-
-        // Settings Header
-        RowLayout {
-          Layout.fillWidth: true
-          spacing: Style.space(8)
-
-          Rectangle {
-            width: Style.space(28)
-            height: Style.space(28)
-            radius: Style.cornerRadius
-            color: setBackHover.containsMouse ? Util.alpha(root.colForeground, 0.15) : Util.alpha(root.colForeground, 0.06)
-            border.color: Util.alpha(root.colBorder, 0.3)
-            border.width: 1
-
-            Text {
-              anchors.centerIn: parent
-              text: "‹"
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.heading
-              color: root.colForeground
-            }
-
-            MouseArea {
-              id: setBackHover
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: root.currentView = "list"
-            }
-          }
-
-          Text {
-            text: "Drawer Settings"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.subtitle
-            font.bold: true
-            color: root.colForeground
-            Layout.fillWidth: true
-          }
-        }
-
-        // Section: Slide Direction Segmented Toggle
-        ColumnLayout {
-          Layout.fillWidth: true
-          spacing: Style.space(8)
-
-          Text {
-            text: "EXPANSION DIRECTION"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            color: Qt.darker(root.colForeground, 1.4)
-          }
-
-          // Horizontal Segmented Toggle Control
-          Rectangle {
-            Layout.fillWidth: true
-            implicitHeight: Style.space(40)
-            radius: Style.cornerRadius
-            color: Util.alpha(root.colForeground, 0.05)
-            border.color: Util.alpha(root.colBorder, 0.3)
-            border.width: 1
-
-            RowLayout {
-              anchors.fill: parent
-              anchors.margins: Style.space(3)
-              spacing: Style.space(3)
-
-              // Toggle Option 1: Slide Left (󰁍)
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.activeSlideDirection === "left" 
-                  ? root.colAccent 
-                  : (leftHover.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
-
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(6)
-
-                  Text {
-                    text: "󰁍"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    color: root.activeSlideDirection === "left" ? "#12131a" : root.colForeground
-                  }
-
-                  Text {
-                    text: "Slide Left"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: root.activeSlideDirection === "left"
-                    color: root.activeSlideDirection === "left" ? "#12131a" : root.colForeground
-                  }
-                }
-
-                MouseArea {
-                  id: leftHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    if (host && host.updateSetting) host.updateSetting("slideDirection", "left")
-                  }
-                }
-              }
-
-              // Toggle Option 2: Slide Right (󰁔)
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                radius: Style.cornerRadius - 1
-                color: root.activeSlideDirection === "right" 
-                  ? root.colAccent 
-                  : (rightHover.containsMouse ? Util.alpha(root.colForeground, 0.1) : "transparent")
-
-                Behavior on color { ColorAnimation { duration: 120 } }
-
-                RowLayout {
-                  anchors.centerIn: parent
-                  spacing: Style.space(6)
-
-                  Text {
-                    text: "󰁔"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    color: root.activeSlideDirection === "right" ? "#12131a" : root.colForeground
-                  }
-
-                  Text {
-                    text: "Slide Right"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: root.activeSlideDirection === "right"
-                    color: root.activeSlideDirection === "right" ? "#12131a" : root.colForeground
-                  }
-                }
-
-                MouseArea {
-                  id: rightHover
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: {
-                    if (host && host.updateSetting) host.updateSetting("slideDirection", "right")
-                  }
-                }
-              }
-            }
-          }
-
-          Text {
-            text: root.activeSlideDirection === "left" 
-              ? "Drawer group icon sits on the right, plugins slide out to the left on top bar." 
-              : "Drawer group icon sits on the left, plugins slide out to the right on top bar."
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            color: Qt.darker(root.colForeground, 1.45)
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-          }
-        }
-
-        Item { Layout.fillHeight: true }
-
-        // Done Button
-        Rectangle {
-          Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(36)
-          radius: Style.cornerRadius
-          color: doneHover.containsMouse ? root.colAccent : Util.alpha(root.colAccent, 0.85)
-          border.color: root.colAccent
-          border.width: 1
-
-          Text {
-            anchors.centerIn: parent
-            text: "Done"
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            font.bold: true
-            color: "#12131a"
-          }
-
-          MouseArea {
-            id: doneHover
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.currentView = "list"
-          }
-        }
-      }
-
-      // 3. ADD / EDIT GROUP EDITOR VIEW
+      // 2. ADD / EDIT GROUP EDITOR VIEW
       GroupEditor {
         anchors.fill: parent
         visible: root.currentView === "editor"
@@ -532,7 +294,7 @@ Item {
         }
       }
 
-      // 4. DELETE CONFIRMATION VIEW
+      // 3. DELETE CONFIRMATION VIEW
       Rectangle {
         anchors.fill: parent
         visible: root.currentView === "delete_confirm"
