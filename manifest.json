@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "akshad.omadrawer",
+  "name": "OmaDrawer",
+  "version": "0.1.0",
+  "author": "Akshad Agrawal",
+  "license": "MIT",
+  "description": "Drawer manager for grouping top bar plugins into organized collapsible drawers",
+  "icon": "assets/omadrawer.svg",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "OmaDrawer",
+    "icon": "assets/omadrawer.svg",
+    "description": "Drawer manager for grouping top bar plugins into organized drawers",
+    "category": "Utilities",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {}
+  }
+}
