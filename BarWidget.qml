@@ -45,6 +45,8 @@ BarWidget {
     return list
   }
 
+  readonly property bool isPrimaryInstance: root.currentRegion === "right"
+
   function open() { popupOpen = true }
   function close() { popupOpen = false }
   function toggle() { popupOpen = !popupOpen }
@@ -89,7 +91,7 @@ BarWidget {
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/plugins/akshad.omadrawer"
   readonly property string groupsFilePath: stateDir + "/groups.json"
 
-  // ------------------------------------------------------------- Persistence
+  // ------------------------------------------------------------- Persistence & Layout
   Process {
     id: ensureDirProc
     command: ["mkdir", "-p", root.stateDir]
@@ -105,6 +107,34 @@ BarWidget {
     printErrors: false
     onLoaded: root.loadGroups(text())
   }
+
+  readonly property var barLayout: {
+    if (bar && bar.barConfig && bar.barConfig.layout) {
+      return bar.barConfig.layout
+    }
+    if (bar && bar.layoutConfig) {
+      return bar.layoutConfig
+    }
+    if (bar && bar.shell && bar.shell.shellConfig && bar.shell.shellConfig.bar && bar.shell.shellConfig.bar.layout) {
+      return bar.shell.shellConfig.bar.layout
+    }
+    return null
+  }
+
+  function reconcileBarLayout() {
+    var res = Logic.reconcileGroupsWithLayout(root.groupsList, root.barLayout)
+    if (res && res.changed) {
+      root.groupsList = res.groups
+      var serialized = Logic.serializeData(res.groups, {
+        displayMode: root.displayMode,
+        slideDirection: root.slideDirection
+      }, root.pluginOrigins)
+      groupsFile.setText(serialized)
+    }
+  }
+
+  onBarLayoutChanged: Qt.callLater(root.reconcileBarLayout)
+  onBarChanged: Qt.callLater(root.reconcileBarLayout)
 
   function syncShellLayout(groups) {
     if (!bar || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
@@ -202,26 +232,24 @@ BarWidget {
         }
       }
 
-      // 5. Ensure akshad.omadrawer is present in all sections that require it
+      // 5. Ensure akshad.omadrawer is present in all sections that require it and deduplicate in each section
       for (var s3 = 0; s3 < sections.length; s3++) {
         var sec3 = sections[s3]
         if (!Array.isArray(config.bar.layout[sec3])) config.bar.layout[sec3] = []
-        var hasDrawer = false
-        for (var dIdx = 0; dIdx < config.bar.layout[sec3].length; dIdx++) {
-          var dEntry = config.bar.layout[sec3][dIdx]
-          var dId = typeof dEntry === "string" ? dEntry : (dEntry && dEntry.id ? dEntry.id : "")
-          if (dId === "akshad.omadrawer") {
-            hasDrawer = true
-            break
+        var seenDrawer = false
+        config.bar.layout[sec3] = config.bar.layout[sec3].filter(function(e) {
+          var eid = typeof e === "string" ? e : (e && e.id ? e.id : "")
+          if (eid === "akshad.omadrawer") {
+            if (!requiredSections[sec3]) return false
+            if (seenDrawer) return false
+            seenDrawer = true
+            return true
           }
-        }
-        if (requiredSections[sec3] && !hasDrawer) {
+          return true
+        })
+
+        if (requiredSections[sec3] && !seenDrawer) {
           config.bar.layout[sec3].push({ id: "akshad.omadrawer" })
-        } else if (!requiredSections[sec3] && hasDrawer && sec3 !== "right") {
-          config.bar.layout[sec3] = config.bar.layout[sec3].filter(function(e) {
-            var eid = typeof e === "string" ? e : (e && e.id ? e.id : "")
-            return eid !== "akshad.omadrawer"
-          })
         }
       }
 
@@ -261,8 +289,6 @@ BarWidget {
     }
     if (!raw || raw.trim().length === 0) {
       root.saveAllGroups(data.groups)
-    } else {
-      Qt.callLater(function() { root.syncShellLayout(data.groups) })
     }
   }
 
@@ -322,7 +348,7 @@ BarWidget {
     // 1. OmaDrawer Manager Icon Button (Hosted on right / primary section)
     WidgetButton {
       id: managerButton
-      visible: root.currentRegion === "right" || root.groupsList.length === 0
+      visible: root.isPrimaryInstance
       bar: root.bar
       text: "󰏖"
       active: root.popupOpen
@@ -352,38 +378,50 @@ BarWidget {
     }
   }
 
-  // ------------------------------------------------------------- Popup Drawer Manager
-  KeyboardPanel {
-    id: popup
-    anchorItem: managerButton
-    bar: root.bar
-    owner: root
-    open: root.popupOpen
-    contentWidth: Style.space(420)
-    contentHeight: Style.space(510)
+  // ------------------------------------------------------------- Popup Drawer Manager (Loaded only on primary instance)
+  Loader {
+    id: popupLoader
+    active: root.isPrimaryInstance
+    sourceComponent: Component {
+      KeyboardPanel {
+        id: popup
+        anchorItem: managerButton
+        bar: root.bar
+        owner: root
+        open: root.popupOpen
+        contentWidth: Style.space(420)
+        contentHeight: Style.space(510)
 
-    onOpenChanged: {
-      if (root.popupOpen !== popup.open) {
-        root.popupOpen = popup.open
+        onOpenChanged: {
+          if (root.popupOpen !== popup.open) {
+            root.popupOpen = popup.open
+          }
+        }
+
+        DrawerManagerView {
+          id: managerView
+          host: root
+          anchors.fill: parent
+        }
       }
-    }
-
-    DrawerManagerView {
-      id: managerView
-      host: root
-      anchors.fill: parent
     }
   }
 
-  // ------------------------------------------------------------- IPC Handler
-  IpcHandler {
-    target: "akshad.omadrawer"
+  // ------------------------------------------------------------- IPC Handler (Loaded ONLY on primary instance to prevent duplicates)
+  Loader {
+    id: ipcLoader
+    active: root.isPrimaryInstance
+    sourceComponent: Component {
+      IpcHandler {
+        target: "akshad.omadrawer"
 
-    function open(): void { root.open() }
-    function close(): void { root.close() }
-    function toggle(): void { root.toggle() }
-    function toggleGroup(groupId: string): void { root.toggleGroupExpanded(groupId) }
-    function reload(): void { root.refreshPlugins() }
+        function open(): void { root.open() }
+        function close(): void { root.close() }
+        function toggle(): void { root.toggle() }
+        function toggleGroup(groupId: string): void { root.toggleGroupExpanded(groupId) }
+        function reload(): void { root.refreshPlugins() }
+      }
+    }
   }
 
   Component.onCompleted: {

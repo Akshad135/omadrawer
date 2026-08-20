@@ -13,7 +13,7 @@ const Logic = new Function(src + `
   return {
     KNOWN_PLUGINS, EXCLUDED_PLUGIN_IDS, PRESET_ICONS,
     isExcludedPlugin, findPluginMeta, generateGroupId,
-    parseData, serializeData, getDefaultGroups
+    parseData, serializeData, getDefaultGroups, reconcileGroupsWithLayout
   }
 `).call(sandbox)
 
@@ -101,6 +101,36 @@ const legacyJson = JSON.stringify(testGroups)
 const parsedLegacy = Logic.parseData(legacyJson)
 check("Legacy raw array JSON formats properly", parsedLegacy.groups, testGroups)
 
+console.log("\n== reconcileGroupsWithLayout ==")
+// Test 1: Dragging a group from left to center
+const leftGroups = [{ id: "g1", name: "LeftGroup", position: "left", plugins: [] }]
+const movedToCenterLayout = {
+  left: ["omarchy.menu"],
+  center: ["akshad.omadrawer"],
+  right: ["akshad.omadrawer"]
+}
+const rec1 = Logic.reconcileGroupsWithLayout(leftGroups, movedToCenterLayout)
+check("Reconciles left to center drag", { changed: rec1.changed, position: rec1.groups[0].position }, { changed: true, position: "center" })
+
+// Test 2: Dragging a group from left to right (where manager also exists)
+const movedToRightLayout = {
+  left: ["omarchy.menu"],
+  center: [],
+  right: [{ id: "akshad.omadrawer" }]
+}
+const rec2 = Logic.reconcileGroupsWithLayout(leftGroups, movedToRightLayout)
+check("Reconciles left to right drag", { changed: rec2.changed, position: rec2.groups[0].position }, { changed: true, position: "right" })
+
+// Test 3: Same side reordering does not alter positions
+const sameSideLayout = {
+  left: ["omarchy.clock", "akshad.omadrawer"],
+  center: [],
+  right: ["akshad.omadrawer"]
+}
+const rec3 = Logic.reconcileGroupsWithLayout(leftGroups, sameSideLayout)
+check("Same side reorder does not change group position", rec3.changed, false)
+
 console.log("\n-----------------------------------------")
 console.log(`Results: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)
+

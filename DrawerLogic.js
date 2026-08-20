@@ -234,6 +234,91 @@ function parseData(rawText) {
   return defaults;
 }
 
+function reconcileGroupsWithLayout(groups, barLayout) {
+  if (!Array.isArray(groups) || groups.length === 0 || !barLayout || typeof barLayout !== "object") {
+    return { changed: false, groups: groups || [] };
+  }
+
+  function hasDrawer(list) {
+    if (!Array.isArray(list)) return false;
+    for (var i = 0; i < list.length; i++) {
+      var entry = list[i];
+      var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "");
+      if (id === "akshad.omadrawer") return true;
+    }
+    return false;
+  }
+
+  var activeSections = {
+    left: hasDrawer(barLayout.left),
+    center: hasDrawer(barLayout.center),
+    right: hasDrawer(barLayout.right)
+  };
+
+  // Sections that currently host groups according to groups array
+  var groupsBySection = { left: [], center: [], right: [] };
+  for (var i = 0; i < groups.length; i++) {
+    var g = groups[i];
+    var pos = (g && g.position) ? g.position : "right";
+    if (!groupsBySection[pos]) groupsBySection[pos] = [];
+    groupsBySection[pos].push(g);
+  }
+
+  // Sections that had groups but no longer have akshad.omadrawer in barLayout
+  var orphanedSections = [];
+  var sections = ["left", "center", "right"];
+  for (var s = 0; s < sections.length; s++) {
+    var sec = sections[s];
+    if (groupsBySection[sec].length > 0 && !activeSections[sec]) {
+      orphanedSections.push(sec);
+    }
+  }
+
+  if (orphanedSections.length === 0) {
+    return { changed: false, groups: groups };
+  }
+
+  // Available destination sections that DO have akshad.omadrawer in barLayout
+  var availableDestSections = [];
+  for (var d = 0; d < sections.length; d++) {
+    var dSec = sections[d];
+    if (activeSections[dSec]) {
+      availableDestSections.push(dSec);
+    }
+  }
+
+  if (availableDestSections.length === 0) {
+    return { changed: false, groups: groups };
+  }
+
+  // Select target: prefer section that had no groups previously, or first available
+  var targetSec = "";
+  for (var a = 0; a < availableDestSections.length; a++) {
+    var cand = availableDestSections[a];
+    if (groupsBySection[cand].length === 0) {
+      targetSec = cand;
+      break;
+    }
+  }
+  if (!targetSec) {
+    targetSec = availableDestSections[0];
+  }
+
+  var updatedGroups = [];
+  var changed = false;
+  for (var j = 0; j < groups.length; j++) {
+    var grp = Object.assign({}, groups[j]);
+    var gPos = grp.position || "right";
+    if (orphanedSections.indexOf(gPos) !== -1) {
+      grp.position = targetSec;
+      changed = true;
+    }
+    updatedGroups.push(grp);
+  }
+
+  return { changed: changed, groups: updatedGroups };
+}
+
 function serializeData(groupsList, settings, pluginOrigins) {
   return JSON.stringify({
     version: 1,
@@ -243,3 +328,4 @@ function serializeData(groupsList, settings, pluginOrigins) {
     groups: groupsList || []
   }, null, 2) + "\n";
 }
+
