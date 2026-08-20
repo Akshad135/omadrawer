@@ -8,6 +8,7 @@ import "DrawerLogic.js" as Logic
 Rectangle {
   id: root
 
+  property var host: null
   property var groupData: null
   property string fontFamily: Style.font.family
   property color foreground: Color.foreground
@@ -18,6 +19,7 @@ Rectangle {
 
   readonly property color colBorder: Style.normalBorderFor(foreground, accent)
   readonly property color colCardBg: Style.normalFillFor(foreground, accent)
+  readonly property var pluginRegistry: host && host.bar && host.bar.shell ? host.bar.shell.pluginRegistry : null
 
   Layout.fillWidth: true
   implicitHeight: cardLayout.implicitHeight + Style.space(20)
@@ -216,7 +218,7 @@ Rectangle {
         model: root.groupData ? root.groupData.plugins : []
 
         delegate: Rectangle {
-          readonly property var meta: Logic.findPluginMeta(modelData)
+          readonly property var meta: Logic.findPluginMeta(modelData, root.pluginRegistry)
           height: Style.space(20)
           width: tagRow.implicitWidth + Style.space(10)
           radius: Style.cornerRadius
@@ -229,11 +231,29 @@ Rectangle {
             anchors.centerIn: parent
             spacing: Style.space(4)
 
-            Text {
-              text: meta.icon
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              color: root.accent
+            // SVG Image or Font Glyph
+            Item {
+              width: Style.space(14)
+              height: Style.space(14)
+
+              Image {
+                anchors.centerIn: parent
+                source: meta.iconUrl || ""
+                visible: meta.iconUrl && meta.iconUrl.length > 0
+                width: Style.space(14)
+                height: Style.space(14)
+                sourceSize: Qt.size(14, 14)
+                fillMode: Image.PreserveAspectFit
+              }
+
+              Text {
+                anchors.centerIn: parent
+                visible: !meta.iconUrl || meta.iconUrl.length === 0
+                text: meta.icon || "󰏖"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                color: root.accent
+              }
             }
 
             Text {

@@ -16,6 +16,8 @@ Rectangle {
   property string viewMode: "editor" // "editor" | "picker"
   property bool showIconPicker: false
 
+  readonly property var pluginRegistry: host && host.bar && host.bar.shell ? host.bar.shell.pluginRegistry : null
+
   // Form State
   property string formId: ""
   property string formName: ""
@@ -103,7 +105,7 @@ Rectangle {
       if (disabledMap[id]) continue
       if (otherGroupsPluginMap[id]) continue
 
-      var meta = Logic.findPluginMeta(id)
+      var meta = Logic.findPluginMeta(id, root.pluginRegistry)
       result.push(meta)
     }
 
@@ -332,7 +334,7 @@ Rectangle {
               }
             }
 
-            // Expandable 50+ Preset Icons Grid
+            // Expandable 60+ Preset Icons Grid
             ColumnLayout {
               Layout.fillWidth: true
               visible: root.showIconPicker
@@ -406,7 +408,7 @@ Rectangle {
           }
         }
 
-        // ----------------- Section 2: Position & Direction Row (Clean Layout)
+        // ----------------- Section 2: Position & Direction Row
         RowLayout {
           Layout.fillWidth: true
           spacing: Style.space(8)
@@ -650,7 +652,7 @@ Rectangle {
             model: root.selectedPluginIds
 
             delegate: Rectangle {
-              readonly property var meta: Logic.findPluginMeta(modelData)
+              readonly property var meta: Logic.findPluginMeta(modelData, root.pluginRegistry)
               readonly property int itemIndex: index
               Layout.fillWidth: true
               implicitHeight: Style.space(38)
@@ -684,12 +686,29 @@ Rectangle {
                   }
                 }
 
-                // Plugin Icon
-                Text {
-                  text: meta.icon || "󰏖"
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
-                  color: root.accent
+                // Plugin Icon (SVG Image or Font Glyph)
+                Item {
+                  width: Style.space(16)
+                  height: Style.space(16)
+
+                  Image {
+                    anchors.centerIn: parent
+                    source: meta.iconUrl || ""
+                    visible: meta.iconUrl && meta.iconUrl.length > 0
+                    width: Style.space(16)
+                    height: Style.space(16)
+                    sourceSize: Qt.size(16, 16)
+                    fillMode: Image.PreserveAspectFit
+                  }
+
+                  Text {
+                    anchors.centerIn: parent
+                    visible: !meta.iconUrl || meta.iconUrl.length === 0
+                    text: meta.icon || "󰏖"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    color: root.accent
+                  }
                 }
 
                 // Plugin Name
@@ -1009,12 +1028,29 @@ Rectangle {
                 }
               }
 
-              // Plugin Icon
-              Text {
-                text: modelData.icon || "󰏖"
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                color: isSelected ? root.accent : root.foreground
+              // Plugin Icon (SVG Image or Font Glyph)
+              Item {
+                width: Style.space(16)
+                height: Style.space(16)
+
+                Image {
+                  anchors.centerIn: parent
+                  source: modelData.iconUrl || ""
+                  visible: modelData.iconUrl && modelData.iconUrl.length > 0
+                  width: Style.space(16)
+                  height: Style.space(16)
+                  sourceSize: Qt.size(16, 16)
+                  fillMode: Image.PreserveAspectFit
+                }
+
+                Text {
+                  anchors.centerIn: parent
+                  visible: !modelData.iconUrl || modelData.iconUrl.length === 0
+                  text: modelData.icon || "󰏖"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  color: isSelected ? root.accent : root.foreground
+                }
               }
 
               // Plugin Name & Category

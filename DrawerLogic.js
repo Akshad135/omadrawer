@@ -1,12 +1,21 @@
 .pragma library
 
-// Default catalogue of known plugins with their icons and friendly names
+// Comprehensive catalogue of plugins with their icons, clean names, and categories
 var KNOWN_PLUGINS = [
+  { id: "omarchy.menu", name: "App Menu", icon: "󰣇", category: "System", desc: "Application launcher" },
+  { id: "omarchy.workspaces", name: "Workspaces", icon: "󰮯", category: "System", desc: "Workspace switcher & pager" },
+  { id: "akshad.lock", name: "Lock Screen", icon: "󰌾", category: "System", desc: "Desktop screen lock" },
+  { id: "omarchy.lock", name: "Lock Screen", icon: "󰌾", category: "System", desc: "Desktop screen lock" },
+  { id: "akshad.clipboard", name: "Clipboard", icon: "󰅍", category: "Utilities", desc: "Clipboard history manager" },
+  { id: "omarchy.clipboard", name: "Clipboard", icon: "󰅍", category: "Utilities", desc: "Clipboard history manager" },
+  { id: "omarchy.system-update", name: "System Update", icon: "󰚰", category: "System", desc: "Package & OS updates" },
   { id: "akshad135.anisync", name: "AniSync", icon: "󰵪", category: "Media", desc: "Anime & Manga tracker" },
   { id: "akshad135.wordle", name: "Wordle", icon: "󰌌", category: "Games", desc: "Daily word puzzle" },
   { id: "jankeesvw.omasweeper", name: "Omasweeper", icon: "⚑", category: "Games", desc: "Minesweeper bar widget" },
+  { id: "io.github.tallsam.navbar-cat", name: "Navbar Cat", icon: "󰄛", category: "Fun", desc: "Cute top bar pet cat" },
   { id: "ilyazar.btop", name: "btop Activity", icon: "󰍛", category: "System", desc: "CPU, RAM & process monitor" },
   { id: "ssupt.audio-control", name: "Audio Control", icon: "󰕮", category: "Media", desc: "Advanced audio mixer" },
+  { id: "omarchy.audio", name: "Audio", icon: "󰕮", category: "Media", desc: "Volume & output devices" },
   { id: "omarchy.tailscale", name: "Tailscale", icon: "󰇄", category: "Network", desc: "VPN & mesh status" },
   { id: "omarchy.bluetooth", name: "Bluetooth", icon: "󰂯", category: "Hardware", desc: "Bluetooth devices" },
   { id: "omarchy.network", name: "Network", icon: "󰤨", category: "Network", desc: "Wi-Fi & Ethernet" },
@@ -17,6 +26,7 @@ var KNOWN_PLUGINS = [
   { id: "omarchy.media", name: "Media Player", icon: "󰐊", category: "Media", desc: "Now playing controls" },
   { id: "omarchy.clock", name: "Clock", icon: "󰥔", category: "Utilities", desc: "Time, calendar & alarms" },
   { id: "shavanced.notification-center", name: "Notification Center", icon: "󰂚", category: "System", desc: "Notifications feed" },
+  { id: "omarchy.notifications", name: "Notifications", icon: "󰂚", category: "System", desc: "Notifications feed" },
   { id: "omarchy.tray", name: "System Tray", icon: "󰇄", category: "System", desc: "Status notifier items" }
 ];
 
@@ -68,19 +78,104 @@ function getDefaultGroups() {
   ];
 }
 
-function findPluginMeta(pluginId) {
-  for (var i = 0; i < KNOWN_PLUGINS.length; i++) {
-    if (KNOWN_PLUGINS[i].id === pluginId) {
-      return KNOWN_PLUGINS[i];
+function findPluginMeta(pluginId, pluginRegistry) {
+  if (!pluginId || typeof pluginId !== "string") {
+    return { id: "unknown", name: "Plugin", icon: "󰏖", iconUrl: "", category: "Plugin", desc: "" };
+  }
+  var trimmedId = pluginId.trim();
+  var iconUrl = "";
+  var registeredName = "";
+  var registeredCat = "";
+  var registeredDesc = "";
+
+  // Dynamic manifest inspection from PluginRegistry
+  if (pluginRegistry && pluginRegistry.installedPlugins && pluginRegistry.installedPlugins[trimmedId]) {
+    var pManifest = pluginRegistry.installedPlugins[trimmedId];
+    if (pManifest) {
+      if (pManifest.name) registeredName = pManifest.name;
+      if (pManifest.description) registeredDesc = pManifest.description;
+      if (pManifest.barWidget) {
+        if (pManifest.barWidget.displayName) registeredName = pManifest.barWidget.displayName;
+        if (pManifest.barWidget.category) registeredCat = pManifest.barWidget.category;
+        if (pManifest.barWidget.description) registeredDesc = pManifest.barWidget.description;
+      }
+      var rawIcon = (pManifest.barWidget && pManifest.barWidget.icon) ? pManifest.barWidget.icon : pManifest.icon;
+      if (rawIcon && typeof rawIcon === "string" && pManifest.__sourceDir) {
+        if (rawIcon.startsWith("/") || rawIcon.startsWith("file://")) {
+          iconUrl = rawIcon;
+        } else {
+          iconUrl = "file://" + pManifest.__sourceDir + "/" + rawIcon;
+        }
+      }
     }
   }
-  var shortName = pluginId.split(".").pop();
+
+  // 1. Direct match in KNOWN_PLUGINS
+  for (var i = 0; i < KNOWN_PLUGINS.length; i++) {
+    if (KNOWN_PLUGINS[i].id === trimmedId) {
+      var item = KNOWN_PLUGINS[i];
+      return {
+        id: trimmedId,
+        name: registeredName || item.name,
+        icon: item.icon,
+        iconUrl: iconUrl,
+        category: registeredCat || item.category,
+        desc: registeredDesc || item.desc
+      };
+    }
+  }
+
+  // 2. Suffix match
+  var rawKey = trimmedId.split(".").pop().toLowerCase();
+  for (var j = 0; j < KNOWN_PLUGINS.length; j++) {
+    var knownKey = KNOWN_PLUGINS[j].id.split(".").pop().toLowerCase();
+    if (rawKey === knownKey) {
+      var kItem = KNOWN_PLUGINS[j];
+      return {
+        id: trimmedId,
+        name: registeredName || kItem.name,
+        icon: kItem.icon,
+        iconUrl: iconUrl,
+        category: registeredCat || kItem.category,
+        desc: registeredDesc || kItem.desc
+      };
+    }
+  }
+
+  // 3. Heuristic match for custom plugins
+  var icon = "󰏖";
+  var category = registeredCat || "Plugin";
+  var lower = trimmedId.toLowerCase();
+
+  if (lower.indexOf("menu") !== -1) { icon = "󰣇"; category = "System"; }
+  else if (lower.indexOf("workspace") !== -1) { icon = "󰮯"; category = "System"; }
+  else if (lower.indexOf("lock") !== -1) { icon = "󰌾"; category = "System"; }
+  else if (lower.indexOf("clip") !== -1) { icon = "󰅍"; category = "Utilities"; }
+  else if (lower.indexOf("update") !== -1) { icon = "󰚰"; category = "System"; }
+  else if (lower.indexOf("cat") !== -1) { icon = "󰄛"; category = "Fun"; }
+  else if (lower.indexOf("audio") !== -1 || lower.indexOf("volume") !== -1 || lower.indexOf("sound") !== -1) { icon = "󰕮"; category = "Media"; }
+  else if (lower.indexOf("notif") !== -1) { icon = "󰂚"; category = "System"; }
+  else if (lower.indexOf("power") !== -1 || lower.indexOf("batt") !== -1) { icon = "󰐥"; category = "System"; }
+  else if (lower.indexOf("btop") !== -1 || lower.indexOf("cpu") !== -1 || lower.indexOf("ram") !== -1) { icon = "󰍛"; category = "System"; }
+  else if (lower.indexOf("blue") !== -1) { icon = "󰂯"; category = "Hardware"; }
+  else if (lower.indexOf("wifi") !== -1 || lower.indexOf("network") !== -1 || lower.indexOf("net") !== -1) { icon = "󰤨"; category = "Network"; }
+  else if (lower.indexOf("weather") !== -1) { icon = "󰖐"; category = "Utilities"; }
+  else if (lower.indexOf("clock") !== -1 || lower.indexOf("time") !== -1) { icon = "󰥔"; category = "Utilities"; }
+  else if (lower.indexOf("mic") !== -1) { icon = "󰍬"; category = "Media"; }
+  else if (lower.indexOf("game") !== -1 || lower.indexOf("wordle") !== -1) { icon = "󰌌"; category = "Games"; }
+  else if (lower.indexOf("sweep") !== -1 || lower.indexOf("mine") !== -1) { icon = "⚑"; category = "Games"; }
+  else if (lower.indexOf("sync") !== -1 || lower.indexOf("ani") !== -1) { icon = "󰵪"; category = "Media"; }
+  else if (lower.indexOf("display") !== -1 || lower.indexOf("monitor") !== -1) { icon = "󰍹"; category = "Hardware"; }
+  else if (lower.indexOf("tray") !== -1) { icon = "󰇄"; category = "System"; }
+
+  var displayName = registeredName || (rawKey.charAt(0).toUpperCase() + rawKey.slice(1));
   return {
-    id: pluginId,
-    name: shortName.charAt(0).toUpperCase() + shortName.slice(1),
-    icon: "󰏖",
-    category: "Plugin",
-    desc: pluginId
+    id: trimmedId,
+    name: displayName,
+    icon: icon,
+    iconUrl: iconUrl,
+    category: category,
+    desc: registeredDesc || trimmedId
   };
 }
 
