@@ -1,13 +1,13 @@
 # OmaDrawer for Omarchy
 
-A native [Omarchy](https://omarchy.org/) status bar plugin that bundles your bar widgets into clean, collapsible, slide-out drawers — each group an independent, draggable slot on your bar.
+A native [Omarchy](https://omarchy.org/) status bar plugin that bundles your bar widgets into clean, collapsible, slide-out drawers - each group an independent, draggable slot on your bar.
 
-![OmaDrawer Preview](preview.png)
+![OmaDrawer Preview](assets/preview.png)
 
 ## Features
 
 - **Collapsible Drawer Groups:** Bundle multiple status bar widgets into compact, expandable slide-out drawers.
-- **Independent Draggable Groups:** Every drawer group is its own bar slot. Drag it to the **Left**, **Center**, or **Right** section — multiple groups can share one section, and each slides out in its own configured direction.
+- **Independent Draggable Groups:** Every drawer group is its own bar slot. Drag it to the **Left**, **Center**, or **Right** section - multiple groups can share one section, and each slides out in its own configured direction.
 - **No Manager Icon:** The bar shows only your groups. The manager opens via right-click on a group header or `omarchy-shell akshad.omadrawer toggle`.
 - **Per-Group Slide Direction:** Configure each drawer to expand left or right to match your screen layout.
 - **Header Display Mode:** Show each group as **Icon**, **Name**, or **Both** (e.g. `󰊖 Games`) on the bar.
@@ -48,6 +48,7 @@ omarchy restart shell
 ## Configuration
 
 Settings can be managed directly in the OmaDrawer Manager view:
+
 - **Groups:** Create, rename, delete, and reorder drawer groups.
 - **Bar Position:** Assign each group to Left, Center, or Right.
 - **Slide Direction:** Choose Left or Right slide expansion per group.

@@ -18,8 +18,7 @@
     "icon": "assets/omadrawer.svg",
     "description": "Drawer manager for grouping top bar plugins into organized collapsible drawers",
     "category": "Utilities",
-    "allowMultiple": true,
-    "defaultSection": "right",
-    "defaults": {}
+    "allowMultiple": false,
+    "defaultSection": "right"
   }
 }
