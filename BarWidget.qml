@@ -20,6 +20,9 @@ BarWidget {
   property string displayMode: "icon" // "icon" | "name" | "both"
   property string slideDirection: "right" // fallback
   property bool popupOpen: false
+  // The bar item the manager popup opens under (the clicked group's own
+  // button). Defaults to this widget, whose root slot can be zero-width.
+  property Item popupAnchor: root
   // False until groups.json has been read. Guards the layout heal: running
   // syncShellLayout with an empty list would wipe group entries and restore
   // every grouped plugin onto the bar, and the resulting reload would race
@@ -406,8 +409,10 @@ BarWidget {
     groupsFile.setText(serialized)
   }
 
-  function requestOpenManager() {
+  function requestOpenManager(anchor) {
+    var target = anchor || null
     if (root.isPrimaryInstance) {
+      if (target) root.popupAnchor = target
       root.open()
       return
     }
@@ -416,6 +421,7 @@ BarWidget {
     for (var i = 0; i < widgets.length; i++) {
       var w = widgets[i]
       if (w && w !== root && w.isPrimaryInstance && typeof w.open === "function") {
+        if (target) w.popupAnchor = target
         w.open()
         return
       }
@@ -512,7 +518,7 @@ BarWidget {
         slideDirection: modelData.direction || "right"
         expanded: root.isGroupExpanded(modelData.id)
         onToggleExpanded: root.toggleGroupExpanded(modelData.id)
-        onOpenManager: root.requestOpenManager()
+        onOpenManager: function(anchor) { root.requestOpenManager(anchor) }
       }
     }
   }
@@ -524,7 +530,7 @@ BarWidget {
     sourceComponent: Component {
       KeyboardPanel {
         id: popup
-        anchorItem: root
+        anchorItem: root.popupAnchor
         bar: root.bar
         owner: root
         open: root.popupOpen

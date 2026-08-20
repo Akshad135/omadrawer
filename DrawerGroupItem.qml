@@ -14,7 +14,7 @@ Item {
   property string slideDirection: "right" // "right" | "left"
 
   signal toggleExpanded()
-  signal openManager()
+  signal openManager(Item anchor)
 
   readonly property color colAccent: Color.accent
   readonly property var pluginsList: (groupData && groupData.plugins) ? groupData.plugins : []
@@ -57,7 +57,7 @@ Item {
 
       onPressed: function(buttonCode) {
         if (buttonCode === Qt.RightButton || root.pluginsList.length === 0) {
-          root.openManager()
+          root.openManager(root)
         } else {
           root.toggleExpanded()
         }
