@@ -51,6 +51,10 @@ function isExcludedPlugin(pluginId) {
   if (!pluginId || typeof pluginId !== "string") return true;
   var id = pluginId.trim();
   if (id === "") return true;
+  // The whole omadrawer entry family is internal: the invisible manager host
+  // (`akshad.omadrawer`) and one unique-id entry per drawer group
+  // (`akshad.omadrawer.<groupId>`).
+  if (id.indexOf("akshad.omadrawer") === 0) return true;
   for (var i = 0; i < EXCLUDED_PLUGIN_IDS.length; i++) {
     if (id === EXCLUDED_PLUGIN_IDS[i] || id === "omarchy." + EXCLUDED_PLUGIN_IDS[i]) {
       return true;
@@ -234,83 +238,64 @@ function parseData(rawText) {
   return defaults;
 }
 
+// The unique bar-layout entry id of a drawer group. The bar's drag system
+// addresses entries by their id, so every omadrawer entry must carry a
+// distinct one: the plain manager host stays `akshad.omadrawer` while each
+// group gets `akshad.omadrawer.<groupId>` and loads this widget through the
+// custom-QML mechanism (type/source). Shared ids make the bar pick the first
+// matching entry on drag, which silently moves the wrong slot — or none.
+function groupEntryId(groupId) {
+  return "akshad.omadrawer." + String(groupId || "");
+}
+
+// Identity of a drawer entry: "plain" for the manager host, "g:<groupId>"
+// for a group entry. Group entries are recognized by their groupId field, or
+// derived from a unique per-group id (missing groupId is healed on sync).
+function drawerEntryKey(entry) {
+  if (typeof entry === "string") return entry === "akshad.omadrawer" ? "plain" : "";
+  if (!entry || typeof entry !== "object") return "";
+  var groupId = entry.groupId ? String(entry.groupId) : "";
+  if (groupId !== "") return "g:" + groupId;
+  var id = String(entry.id || "");
+  if (id === "akshad.omadrawer") return "plain";
+  var prefix = "akshad.omadrawer.";
+  if (id.indexOf(prefix) === 0 && id.length > prefix.length) return "g:" + id.substring(prefix.length);
+  return "";
+}
+
+// Every drawer group owns its own bar layout entry `{ id, groupId }`, so a
+// group is an independent bar slot in every section (including the section
+// that hosts the plain manager entry). A group's position follows the section
+// its own entry was dragged into; the plain manager entry binds to nothing.
 function reconcileGroupsWithLayout(groups, barLayout) {
   if (!Array.isArray(groups) || groups.length === 0 || !barLayout || typeof barLayout !== "object") {
     return { changed: false, groups: groups || [] };
   }
 
-  function hasDrawer(list) {
-    if (!Array.isArray(list)) return false;
-    for (var i = 0; i < list.length; i++) {
-      var entry = list[i];
-      var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "");
-      if (id === "akshad.omadrawer") return true;
-    }
-    return false;
-  }
-
-  var activeSections = {
-    left: hasDrawer(barLayout.left),
-    center: hasDrawer(barLayout.center),
-    right: hasDrawer(barLayout.right)
-  };
-
-  // Sections that currently host groups according to groups array
-  var groupsBySection = { left: [], center: [], right: [] };
-  for (var i = 0; i < groups.length; i++) {
-    var g = groups[i];
-    var pos = (g && g.position) ? g.position : "right";
-    if (!groupsBySection[pos]) groupsBySection[pos] = [];
-    groupsBySection[pos].push(g);
-  }
-
-  // Sections that had groups but no longer have akshad.omadrawer in barLayout
-  var orphanedSections = [];
+  var entrySections = {};
   var sections = ["left", "center", "right"];
   for (var s = 0; s < sections.length; s++) {
-    var sec = sections[s];
-    if (groupsBySection[sec].length > 0 && !activeSections[sec]) {
-      orphanedSections.push(sec);
+    var list = barLayout[sections[s]];
+    if (!Array.isArray(list)) continue;
+    for (var i = 0; i < list.length; i++) {
+      var entryKey = drawerEntryKey(list[i]);
+      if (entryKey.indexOf("g:") !== 0) continue;
+      var gid = entryKey.substring(2);
+      if (gid && entrySections[gid] === undefined) {
+        entrySections[gid] = sections[s];
+      }
     }
   }
 
-  if (orphanedSections.length === 0) {
-    return { changed: false, groups: groups };
-  }
-
-  // Available destination sections that DO have akshad.omadrawer in barLayout
-  var availableDestSections = [];
-  for (var d = 0; d < sections.length; d++) {
-    var dSec = sections[d];
-    if (activeSections[dSec]) {
-      availableDestSections.push(dSec);
-    }
-  }
-
-  if (availableDestSections.length === 0) {
-    return { changed: false, groups: groups };
-  }
-
-  // Select target: prefer section that had no groups previously, or first available
-  var targetSec = "";
-  for (var a = 0; a < availableDestSections.length; a++) {
-    var cand = availableDestSections[a];
-    if (groupsBySection[cand].length === 0) {
-      targetSec = cand;
-      break;
-    }
-  }
-  if (!targetSec) {
-    targetSec = availableDestSections[0];
-  }
-
-  var updatedGroups = [];
   var changed = false;
+  var updatedGroups = [];
   for (var j = 0; j < groups.length; j++) {
-    var grp = Object.assign({}, groups[j]);
-    var gPos = grp.position || "right";
-    if (orphanedSections.indexOf(gPos) !== -1) {
-      grp.position = targetSec;
+    var g = groups[j];
+    if (!g) { updatedGroups.push(g); continue; }
+    var grp = Object.assign({}, g);
+    var match = entrySections[grp.id];
+    if (match && (grp.position || "right") !== match) {
+      grp.position = match;
       changed = true;
     }
     updatedGroups.push(grp);
@@ -319,6 +304,8 @@ function reconcileGroupsWithLayout(groups, barLayout) {
   return { changed: changed, groups: updatedGroups };
 }
 
+// Deduplicate per entry key so a plain manager entry and per-group entries
+// can coexist in the same section without one suppressing the others.
 function deduplicateBarLayout(barLayout) {
   if (!barLayout || typeof barLayout !== "object") return { changed: false, layout: barLayout };
   var sections = ["left", "center", "right"];
@@ -329,21 +316,21 @@ function deduplicateBarLayout(barLayout) {
     var sec = sections[s];
     var list = barLayout[sec];
     if (Array.isArray(list)) {
-      var seenDrawer = false;
+      var seenKeys = {};
       var filtered = [];
       for (var i = 0; i < list.length; i++) {
         var entry = list[i];
-        var id = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "");
-        if (id === "akshad.omadrawer") {
-          if (!seenDrawer) {
-            seenDrawer = true;
-            filtered.push(entry);
-          } else {
-            changed = true;
-          }
-        } else {
+        var key = drawerEntryKey(entry);
+        if (key === "") {
           filtered.push(entry);
+          continue;
         }
+        if (seenKeys[key]) {
+          changed = true;
+          continue;
+        }
+        seenKeys[key] = true;
+        filtered.push(entry);
       }
       nextLayout[sec] = filtered;
     } else {
@@ -352,6 +339,68 @@ function deduplicateBarLayout(barLayout) {
   }
 
   return { changed: changed, layout: nextLayout };
+}
+
+// True when the bar layout does not yet match the per-group entry model:
+// the plain manager entry missing from the right section, a group missing
+// its own entry, a stale group entry, a plain entry in left/center, or a
+// group entry that does not carry its canonical shape (unique per-group id
+// plus the custom-QML type/source). Legacy shared-id entries satisfy the
+// key sets but share `akshad.omadrawer` with the host — the bar's drag
+// system then cannot tell them apart, so they must be rewritten. When
+// widgetSource is empty the source check is skipped (unit tests).
+function groupsNeedLayoutSync(groups, barLayout, widgetSource) {
+  var sections = ["left", "center", "right"];
+  var desired = { left: {}, center: {}, right: {} };
+  desired.right["plain"] = true;
+
+  if (Array.isArray(groups)) {
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      if (!g) continue;
+      var pos = g.position || "right";
+      desired[pos]["g:" + g.id] = true;
+    }
+  }
+
+  var actual = { left: {}, center: {}, right: {} };
+  if (barLayout && typeof barLayout === "object") {
+    for (var s = 0; s < sections.length; s++) {
+      var list = barLayout[sections[s]];
+      if (!Array.isArray(list)) continue;
+      for (var j = 0; j < list.length; j++) {
+        var key = drawerEntryKey(list[j]);
+        if (key !== "") actual[sections[s]][key] = true;
+      }
+    }
+  }
+
+  for (var k = 0; k < sections.length; k++) {
+    var sec = sections[k];
+    var d = desired[sec];
+    var a = actual[sec];
+    for (var dk in d) { if (!a[dk]) return true; }
+    for (var ak in a) { if (!d[ak]) return true; }
+  }
+
+  var src = widgetSource ? String(widgetSource) : "";
+  if (barLayout && typeof barLayout === "object") {
+    for (var s2 = 0; s2 < sections.length; s2++) {
+      var list2 = barLayout[sections[s2]];
+      if (!Array.isArray(list2)) continue;
+      for (var j2 = 0; j2 < list2.length; j2++) {
+        var key2 = drawerEntryKey(list2[j2]);
+        if (key2.indexOf("g:") !== 0) continue;
+        var e2 = list2[j2];
+        var gid2 = key2.substring(2);
+        if (String(e2.id || "") !== groupEntryId(gid2)) return true;
+        if (String(e2.groupId || "") !== gid2) return true;
+        if (String(e2.type || "") !== "qml") return true;
+        if (src !== "" && String(e2.source || "") !== src) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function serializeData(groupsList, settings, pluginOrigins) {

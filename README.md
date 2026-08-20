@@ -32,8 +32,8 @@ omarchy restart shell
 ## Usage & Controls
 
 - **Left-Click Drawer Header:** Slide out or collapse bundled widgets.
-- **Right-Click OmaDrawer Icon:** Open the OmaDrawer Manager popup.
-- **CLI / Keybinding:** Toggle manager via `omarchy-shell akshad.omadrawer toggle`.
+- **Right-Click Drawer Header:** Open the OmaDrawer Manager popup.
+- **CLI / Keybinding:** Open the manager via `omarchy-shell akshad.omadrawer toggle`. No manager icon occupies the bar — only your groups do.
 - **Keyboard Shortcuts in Manager:**
   - `Escape`: Close popup manager.
 

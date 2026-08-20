@@ -20,6 +20,11 @@ BarWidget {
   property string displayMode: "icon" // "icon" | "name" | "both"
   property string slideDirection: "right" // fallback
   property bool popupOpen: false
+  // False until groups.json has been read. Guards the layout heal: running
+  // syncShellLayout with an empty list would wipe group entries and restore
+  // every grouped plugin onto the bar, and the resulting reload would race
+  // the file load again — an infinite wipe/restore flicker loop.
+  property bool groupsLoaded: false
 
   readonly property string currentRegion: {
     var p = root.parent
@@ -32,13 +37,37 @@ BarWidget {
     return "right"
   }
 
+  // Every drawer group lives in its own bar layout entry `{ id, groupId }`,
+  // so each group is an independent bar slot in every section. This instance
+  // renders exactly the group named by its entry's groupId (empty for the
+  // plain manager entry, which never renders groups).
+  readonly property string hostGroupId: (settings && settings.groupId) ? String(settings.groupId) : ""
+
+  // The plugin's own id. `moduleName` is overwritten by the bar with the
+  // entry id — unique per group entry — so instance lookups must use this
+  // constant instead.
+  readonly property string pluginId: "akshad.omadrawer"
+
+  // Absolute path of this plugin's widget, baked into group entries so the
+  // bar loads them as custom-QML modules under their unique per-group ids.
+  // The bar's drag system addresses entries by id; shared ids would make it
+  // move the first matching entry (the invisible host) instead of the group.
+  readonly property string widgetSource: {
+    var cfg = (bar && bar.omarchyConfigDir) ? String(bar.omarchyConfigDir) : ""
+    if (!cfg) {
+      var home = Quickshell.env("HOME") || ""
+      cfg = home ? home + "/.config/omarchy" : ""
+    }
+    return cfg ? cfg + "/plugins/akshad.omadrawer/BarWidget.qml" : ""
+  }
+
   readonly property var visibleGroups: {
     var list = []
     if (!root.groupsList) return list
+    if (root.hostGroupId === "") return list
     for (var i = 0; i < root.groupsList.length; i++) {
       var g = root.groupsList[i]
-      var pos = g && g.position ? g.position : "right"
-      if (pos === root.currentRegion) {
+      if (g && g.id === root.hostGroupId) {
         list.push(g)
       }
     }
@@ -47,17 +76,34 @@ BarWidget {
 
   readonly property bool isDuplicateSlot: {
     if (!bar || typeof bar.moduleWidgets !== "function") return false
-    var widgets = bar.moduleWidgets(root.moduleName)
+    var widgets = bar.moduleWidgets(root.pluginId)
     if (!Array.isArray(widgets) || widgets.length <= 1) return false
     for (var i = 0; i < widgets.length; i++) {
-      if (widgets[i] && widgets[i].currentRegion === root.currentRegion) {
+      if (widgets[i] && widgets[i].hostGroupId === root.hostGroupId) {
         return widgets[i] !== root
       }
     }
     return false
   }
 
-  readonly property bool isPrimaryInstance: !isDuplicateSlot && root.currentRegion === "right"
+  readonly property bool plainEntryInRight: {
+    var layout = root.barLayout
+    if (!layout || !Array.isArray(layout.right)) return false
+    for (var i = 0; i < layout.right.length; i++) {
+      var e = layout.right[i]
+      if (typeof e === "object" && e && e.id === "akshad.omadrawer" && !e.groupId) return true
+    }
+    return false
+  }
+
+  readonly property bool isPrimaryInstance: {
+    if (root.isDuplicateSlot) return false
+    if (root.hostGroupId === "") return root.currentRegion === "right"
+    // Fallback: a right-section group host acts as manager (icon, popup, IPC)
+    // until the layout sync restores the plain manager entry, so the manager
+    // is never lost mid-upgrade.
+    return root.currentRegion === "right" && !root.plainEntryInRight
+  }
 
   function open() { popupOpen = true }
   function close() { popupOpen = false }
@@ -118,6 +164,7 @@ BarWidget {
     watchChanges: true
     printErrors: false
     onLoaded: root.loadGroups(text())
+    onFileChanged: reload()
   }
 
   readonly property var barLayout: {
@@ -134,6 +181,7 @@ BarWidget {
   }
 
   function reconcileBarLayout() {
+    if (!root.groupsLoaded) return
     var res = Logic.reconcileGroupsWithLayout(root.groupsList, root.barLayout)
     if (res && res.changed) {
       root.groupsList = res.groups
@@ -144,8 +192,12 @@ BarWidget {
       groupsFile.setText(serialized)
     }
 
-    // Auto-clean redundant duplicate slots in any section (e.g. after dragging group to right where manager exists)
+    // Self-heal the per-group entry model (missing, stale or duplicate slots)
     if (root.isPrimaryInstance && bar && bar.shell && typeof bar.shell.mutateShellConfig === "function") {
+      if (Logic.groupsNeedLayoutSync(root.groupsList, root.barLayout, root.widgetSource)) {
+        root.syncShellLayout(root.groupsList)
+        return
+      }
       var dedup = Logic.deduplicateBarLayout(root.barLayout)
       if (dedup && dedup.changed) {
         bar.shell.mutateShellConfig(function(config) {
@@ -160,17 +212,15 @@ BarWidget {
   onBarChanged: Qt.callLater(root.reconcileBarLayout)
 
   function syncShellLayout(groups) {
+    if (!root.groupsLoaded) return
     if (!bar || !bar.shell || typeof bar.shell.mutateShellConfig !== "function") return
 
     // 1. Build map of all plugin IDs that are currently in at least one drawer group
     var groupedMap = {}
-    var requiredSections = { "right": true } // "right" is the default manager home
 
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i]
       if (g) {
-        var gPos = g.position || "right"
-        requiredSections[gPos] = true
         if (g.plugins && Array.isArray(g.plugins)) {
           for (var j = 0; j < g.plugins.length; j++) {
             var pid = String(g.plugins[j]).trim()
@@ -255,25 +305,66 @@ BarWidget {
         }
       }
 
-      // 5. Ensure akshad.omadrawer is present in all sections that require it and deduplicate in each section
+      // 5. Rebuild drawer entries: exactly one plain manager entry (right
+      //    section only — the invisible host of the IPC handler and the
+      //    manager popup) and one entry per group in its own position
+      //    section. Group entries carry a unique id (`akshad.omadrawer.<id>`)
+      //    and load this widget via the custom-QML mechanism, so the bar's
+      //    drag system — which addresses entries by id — can tell every
+      //    group apart in every section, even several groups side by side.
+      var managerSeen = false
+      var widgetSrc = root.widgetSource
       for (var s3 = 0; s3 < sections.length; s3++) {
         var sec3 = sections[s3]
         if (!Array.isArray(config.bar.layout[sec3])) config.bar.layout[sec3] = []
-        var seenDrawer = false
-        config.bar.layout[sec3] = config.bar.layout[sec3].filter(function(e) {
-          var eid = typeof e === "string" ? e : (e && e.id ? e.id : "")
-          if (eid === "akshad.omadrawer") {
-            if (!requiredSections[sec3]) return false
-            if (seenDrawer) return false
-            seenDrawer = true
-            return true
-          }
-          return true
-        })
 
-        if (requiredSections[sec3] && !seenDrawer) {
-          config.bar.layout[sec3].push({ id: "akshad.omadrawer" })
+        var groupKeys = {}
+        for (var g3 = 0; g3 < groups.length; g3++) {
+          var gg = groups[g3]
+          if (gg && (gg.position || "right") === sec3) groupKeys[gg.id] = true
         }
+
+        var kept = []
+        var seenGroup = {}
+        for (var e3 = 0; e3 < config.bar.layout[sec3].length; e3++) {
+          var ent = config.bar.layout[sec3][e3]
+          var entKey = Logic.drawerEntryKey(ent)
+          if (entKey === "") {
+            kept.push(ent)
+            continue
+          }
+          if (entKey === "plain") {
+            if (sec3 !== "right" || managerSeen) continue
+            managerSeen = true
+            kept.push({ id: "akshad.omadrawer" })
+          } else {
+            var eGid = entKey.substring(2)
+            if (!groupKeys[eGid] || seenGroup[eGid]) continue
+            seenGroup[eGid] = true
+            kept.push({
+              id: Logic.groupEntryId(eGid),
+              type: "qml",
+              source: widgetSrc,
+              groupId: eGid
+            })
+          }
+        }
+
+        if (sec3 === "right" && !managerSeen) {
+          kept.push({ id: "akshad.omadrawer" })
+          managerSeen = true
+        }
+        for (var gk in groupKeys) {
+          if (!seenGroup[gk]) {
+            kept.push({
+              id: Logic.groupEntryId(gk),
+              type: "qml",
+              source: widgetSrc,
+              groupId: gk
+            })
+          }
+        }
+        config.bar.layout[sec3] = kept
       }
 
       // 6. Restore un-grouped plugins back to their ORIGINAL origin sections
@@ -302,6 +393,22 @@ BarWidget {
     groupsFile.setText(serialized)
   }
 
+  function requestOpenManager() {
+    if (root.isPrimaryInstance) {
+      root.open()
+      return
+    }
+    if (!bar || typeof bar.moduleWidgets !== "function") return
+    var widgets = bar.moduleWidgets(root.pluginId)
+    for (var i = 0; i < widgets.length; i++) {
+      var w = widgets[i]
+      if (w && w !== root && w.isPrimaryInstance && typeof w.open === "function") {
+        w.open()
+        return
+      }
+    }
+  }
+
   function loadGroups(raw) {
     var data = Logic.parseData(raw)
     root.groupsList = data.groups
@@ -313,6 +420,8 @@ BarWidget {
     if (!raw || raw.trim().length === 0) {
       root.saveAllGroups(data.groups)
     }
+    root.groupsLoaded = true
+    Qt.callLater(root.reconcileBarLayout)
   }
 
   function saveAllGroups(list) {
@@ -369,23 +478,9 @@ BarWidget {
     spacing: 0
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
-    // 1. OmaDrawer Manager Icon Button (Hosted on right / primary section)
-    WidgetButton {
-      id: managerButton
-      visible: root.isPrimaryInstance
-      bar: root.bar
-      text: "󰏖"
-      active: root.popupOpen
-      useActiveColor: true
-      activeColor: root.colAccent
-      tooltipText: "OmaDrawer Manager (" + (root.groupsList ? root.groupsList.length : 0) + " groups)"
-
-      onPressed: function(buttonCode) {
-        root.toggle()
-      }
-    }
-
-    // 2. Active Drawer Groups in this Specific Bar Section
+    // Drawer Groups hosted by this instance (exactly one per group entry).
+    // There is no manager icon on the bar: the manager popup is reached via
+    // `omarchy-shell akshad.omadrawer toggle` or right-clicking a group.
     Repeater {
       model: root.visibleGroups
 
@@ -397,7 +492,7 @@ BarWidget {
         slideDirection: modelData.direction || "right"
         expanded: root.isGroupExpanded(modelData.id)
         onToggleExpanded: root.toggleGroupExpanded(modelData.id)
-        onOpenManager: root.open()
+        onOpenManager: root.requestOpenManager()
       }
     }
   }
@@ -409,7 +504,7 @@ BarWidget {
     sourceComponent: Component {
       KeyboardPanel {
         id: popup
-        anchorItem: managerButton
+        anchorItem: root
         bar: root.bar
         owner: root
         open: root.popupOpen

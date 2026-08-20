@@ -83,6 +83,7 @@ Rectangle {
         if (Array.isArray(secList)) {
           for (var j = 0; j < secList.length; j++) {
             var entry = secList[j]
+            if (Logic.drawerEntryKey(entry) !== "") continue
             var pid = typeof entry === "string" ? entry : (entry && entry.id ? entry.id : "")
             addId(pid)
           }
