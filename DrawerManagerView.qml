@@ -216,7 +216,7 @@ Item {
             Rectangle {
               visible: root.showWelcomeCard
               Layout.fillWidth: true
-              implicitHeight: Style.space(240)
+              implicitHeight: Style.space(200)
               radius: Style.cornerRadius
               color: Util.alpha(colAccent, 0.07)
               border.color: Util.alpha(colAccent, 0.35)
@@ -267,36 +267,6 @@ Item {
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                   color: colDim
-                }
-
-                Rectangle {
-                  Layout.alignment: Qt.AlignHCenter
-                  Layout.preferredWidth: Style.space(170)
-                  Layout.preferredHeight: Style.space(34)
-                  radius: Style.cornerRadius
-                  color: getStartedHover.containsMouse ? colAccent : Util.alpha(colAccent, 0.85)
-                  border.color: colAccent
-                  border.width: 1
-
-                  Text {
-                    anchors.centerIn: parent
-                    text: "Create your first group"
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.body
-                    font.bold: true
-                    color: "#12131a"
-                  }
-
-                  MouseArea {
-                    id: getStartedHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                      root.editingGroup = null
-                      root.currentView = "editor"
-                    }
-                  }
                 }
               }
             }
